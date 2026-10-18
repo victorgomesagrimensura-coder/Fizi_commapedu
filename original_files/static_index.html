@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#080d10" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Fizi School | Enterprise Analytics & CMS Platform</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Paleta de Cores Fizi Kabiria (África Oriental) */
+            --bg-dark: #110A05;
+            --bg-panel: rgba(28, 18, 12, 0.85);
+            --color-primary: #E57C23;   /* Terracota */
+            --color-secondary: #025464; /* Verde Petróleo */
+            --color-accent: #E8AA42;    /* Mostarda */
+            --color-text: #F8F1F1;
+            --color-danger: #ef4444;
+            --color-success: #10b981;
+            
+            /* Assets Visuais */
+            --hero-bg-image: url('https://images.unsplash.com/photo-1542869781-a2725cb1ec5e?q=80&w=2000&auto=format&fit=crop');
+            --logo-image: url("/static/1_logo_color_ComMap.png");
+        }
+
+        * {
+            margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif;
+            scrollbar-width: thin; scrollbar-color: var(--color-primary) var(--bg-dark);
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at top right, #24160e 0%, #110A05 100%);
+            color: var(--color-text);
+            overflow-x: hidden;
+            display: flex;
+        }
+
+        /* Classes de Glassmorphism Premium */
+        .glass {
+            background: var(--bg-panel);
+            border: 1px solid rgba(229, 124, 35, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 1.25rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .glass:hover {
+            box-shadow: 0 12px 40px rgba(229, 124, 35, 0.15);
+            border-color: rgba(229, 124, 35, 0.4);
+        }
+
+        /* Sidebar e Navegação */
+        .sidebar {
+            width: 320px;
+            height: 100vh;
+            position: fixed;
+            left: 0; top: 0;
+            background: linear-gradient(180deg, rgba(17,10,5,0.95) 0%, rgba(0,0,0,1) 100%);
+            border-right: 1px solid rgba(255,255,255,0.05);
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .logo-container { display: none !important; }
+
+        .sidebar-link {
+            padding: 14px 18px; border-radius: 12px; cursor: pointer;
+            color: #a1a1aa; font-weight: 600; transition: all 0.2s ease;
+            display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+        }
+
+        .sidebar-link:hover {
+            background: rgba(255,255,255,0.05); color: #fff; transform: translateX(5px);
+        }
+
+        .sidebar-link.active {
+            background: linear-gradient(135deg, var(--color-primary), #a64b2a);
+            color: #fff; box-shadow: 0 4px 15px rgba(229, 124, 35, 0.3);
+            transform: translateX(5px);
+        }
+
+        /* Estrutura Principal */
+        .main-content {
+            margin-left: 320px;
+            flex: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            width: calc(100% - 320px);
+        }
+
+        /* Seções de Páginas (Tabs) */
+        .page-section {
+            display: none;
+            padding: 2.5rem;
+            animation: fadeIn 0.5s ease;
+        }
+        .page-section.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Elementos UI */
+        .hero-banner {
+            background-image: linear-gradient(rgba(17, 10, 5, 0.85), rgba(17, 10, 5, 0.95)), var(--hero-bg-image);
+            background-size: cover; background-position: center;
+            border-bottom: 2px solid var(--color-primary);
+            padding: 4rem 2.5rem;
+        }
+
+        .chart-container { 
+            position: relative; 
+            height: 380px; 
+            width: 100%; 
+            margin-top: 1rem;
+            padding: 10px;
+        }
+        /* Espaço adicional para a legenda completa de Origem (Nacionalidade). */
+        #origin-chart-card { grid-column: span 2 / span 2; }
+        #origin-chart-card .chart-container { height: 300px !important; min-height: 280px; }
+        @media (max-width: 760px) {
+            #origin-chart-card { grid-column: span 1 / span 1; }
+            #origin-chart-card .chart-container { height: 340px !important; min-height: 320px; }
+        }
+        
+        .map-box { 
+            height: 550px; 
+            width: 100%; 
+            border-radius: 1rem; 
+            border: 2px solid var(--color-secondary); 
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .metric-value { font-size: 3rem; font-weight: 900; line-height: 1; margin: 10px 0; }
+        
+        .badge {
+            padding: 6px 14px; border-radius: 999px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
+        }
+        .badge-primary { background: rgba(229, 124, 35, 0.2); color: #ffb470; }
+        .badge-secondary { background: rgba(2, 84, 100, 0.3); color: #4fd1c5; }
+        
+        .btn {
+            padding: 12px 24px; border-radius: 12px; font-weight: 800; cursor: pointer; transition: all 0.3s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; font-size: 0.9rem;
+        }
+        .btn-primary { background: linear-gradient(135deg, var(--color-primary), #c25a12); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(229, 124, 35, 0.4); }
+        .btn-outline { border: 2px solid var(--color-accent); color: var(--color-accent); background: transparent; }
+        .btn-outline:hover { background: rgba(232, 170, 66, 0.1); }
+
+        /* Estilo da Caixa de Insights da IA */
+        .ai-insight-box {
+            margin-top: 1.25rem;
+            padding: 1rem;
+            background: rgba(232, 170, 66, 0.06);
+            border-left: 4px solid var(--color-accent);
+            border-radius: 0 12px 12px 0;
+            font-size: 0.8rem;
+            color: #e2e8f0;
+            line-height: 1.5;
+        }
+        .ai-insight-box span {
+            display: block;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-accent);
+            margin-bottom: 0.25rem;
+        }
+
+        /* Leaflet Custom Control para Mapas Temáticos */
+        .custom-theme-control {
+            background: rgba(17, 10, 5, 0.9);
+            border: 1px solid var(--color-primary);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 10px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .custom-theme-control select {
+            background: #2a1b12;
+            color: #fff;
+            border: 1px solid var(--color-primary);
+            padding: 5px;
+            border-radius: 4px;
+            width: 100%;
+            outline: none;
+            font-family: 'Outfit';
+            font-size: 13px;
+        }
+
+        /* Seletor de Idiomas na Sidebar */
+        .lang-selector-container {
+            margin-bottom: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 8px;
+        }
+        .lang-select {
+            display: block;
+            width: 100%;
+            min-height: 40px;
+            padding: 8px 10px;
+            background: #fffaf2;
+            color: #30271e;
+            border: 1px solid #eadfce;
+            border-radius: 8px;
+            outline: none;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            color-scheme: light;
+        }
+        .lang-select:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(232,117,36,.16); }
+        .lang-select option { background: #fffaf2; color: #30271e; }
+
+        /* Modo CMS / Editor */
+        .admin-only { display: none !important; }
+        .edit-mode .admin-only { display: flex !important; }
+        .edit-mode .editable {
+            border: 2px dashed rgba(232, 170, 66, 0.6);
+            border-radius: 8px;
+            padding: 4px 8px;
+            transition: background 0.3s;
+            position: relative;
+        }
+        .edit-mode .editable:hover { background: rgba(232, 170, 66, 0.15); cursor: text; }
+        .edit-mode .editable:focus { background: rgba(232, 170, 66, 0.25); outline: none; border-style: solid; }
+
+        .admin-toolbar {
+            background: #1e140d; border-bottom: 2px solid var(--color-primary);
+            padding: 1rem 2.5rem; display: flex; gap: 15px; align-items: center;
+            position: sticky; top: 0; z-index: 999; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        /* Modais e Loaders */
+        #loginModal {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(5px);
+            display: none; justify-content: center; align-items: center; z-index: 10000;
+        }
+        .modal-box {
+            background: var(--bg-dark); padding: 3rem; border-radius: 20px; border: 1px solid var(--color-primary);
+            width: 100%; max-width: 400px; box-shadow: 0 20px 50px rgba(229,124,35,0.2);
+        }
+        #loader {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999;
+            justify-content: center; align-items: center; flex-direction: column;
+        }
+        .spinner {
+            width: 60px; height: 60px; border: 5px solid rgba(229, 124, 35, 0.2);
+            border-top-color: var(--color-primary); border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Tema escuro de alto contraste — carvão, verde profundo e âmbar */
+        :root { --bg-dark:#080d10; --bg-panel:rgba(17,26,31,.94); --color-primary:#f08a24; --color-secondary:#087e73; --color-accent:#f3bd3e; --color-text:#f3f6f8; }
+        body { background:#080d10; background-image:radial-gradient(circle at 85% 0%,rgba(18,67,63,.30),transparent 32%),linear-gradient(135deg,#080d10,#0b1217 60%,#101719); color:#f3f6f8; }
+        .sidebar { background:linear-gradient(180deg,#0b1216 0%,#070a0c 100%); border-right:1px solid #25343a; box-shadow:8px 0 30px rgba(0,0,0,.35); }
+        .sidebar-link { color:#bdc8cd; } .sidebar-link:hover { background:rgba(240,138,36,.12); color:#fff; }
+        .sidebar-link.active { background:linear-gradient(135deg,#d96b13,#9c3f0b); color:#fff; box-shadow:0 4px 18px rgba(240,138,36,.22); }
+        .glass { background:linear-gradient(145deg,rgba(22,34,40,.97),rgba(13,22,27,.97)); border:1px solid rgba(243,189,62,.20); color:#edf3f5; box-shadow:0 10px 34px rgba(0,0,0,.32); backdrop-filter:blur(18px); }
+        .glass:hover { box-shadow:0 14px 38px rgba(0,0,0,.42); border-color:rgba(240,138,36,.48); }
+        .hero-banner { background-image:linear-gradient(90deg,rgba(6,11,14,.94),rgba(6,11,14,.82)),var(--hero-bg-image); border-bottom:3px solid var(--color-primary); }
+        .hero-banner h2,.hero-banner p,.glass h3,.editable { color:#f3f6f8; }
+        .text-gray-300 { color:#c4cdd2!important; } .text-gray-400 { color:#aebbc2!important; } .text-gray-500 { color:#93a2aa!important; }
+        .sidebar .text-white { color:#f8fafc!important; } .sidebar .text-gray-400 { color:#aebbc2!important; }
+        .lang-selector-container,.admin-toolbar { background:rgba(13,22,27,.97); border-color:#2c3c42; }
+        .admin-toolbar { box-shadow:0 4px 20px rgba(0,0,0,.42); } .admin-toolbar span,.admin-toolbar p { color:#e4ecef; }
+        .custom-theme-control { background:rgba(10,17,21,.97); color:#f3f6f8; }
+        .custom-theme-control select { background:#101a20;color:#f3f6f8; }
+        #loginModal { background:rgba(0,0,0,.88); } .modal-box { background:#0d161b; color:#f3f6f8; }
+        .modal-box h2 { color:#f3f6f8!important; } .metric-value { color:#fff; }
+        footer { background:#0b1216!important; border-color:#293940!important; }
+        .comparison-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem; }
+        .audit-result { border-radius:12px;padding:12px;background:#10251e;border:1px solid #286a4b;color:#d4f7e4;margin-top:10px; }
+        .audit-warn { background:#2b2110;border-color:#87601b;color:#ffe4a3; }
+        .toolbar-select,.lang-select { padding:10px 12px;border:1px solid #3b4b52;border-radius:10px;background:#111c22;color:#f3f6f8;font-weight:700;color-scheme:dark; }
+        .lang-select option,.toolbar-select option { background:#111c22;color:#f3f6f8; }
+        input,textarea,select { color-scheme:dark; }
+        .bg-white,.bg-white\/80,.bg-white\/90 { background-color:#111c22!important; }
+        .text-gray-900,.text-gray-800,.text-gray-700,.text-gray-600 { color:#e2eaf0!important; }
+        .border-gray-200,.border-gray-300 { border-color:#33444b!important; }
+        .leaflet-control-layers,.leaflet-control-layers-expanded { background:#101a20!important;color:#f3f6f8!important;border:1px solid #405159!important; }
+        .leaflet-control-layers label { color:#e8eef1!important; }
+        @media(max-width:900px){.sidebar{width:245px;padding:1.2rem}.main-content{margin-left:245px;width:calc(100% - 245px)}.page-section{padding:1.2rem}.admin-toolbar{flex-wrap:wrap;padding:1rem}.hero-banner{padding:2rem 1.2rem}}
+        @media(max-width:650px){.sidebar{position:relative;width:100%;height:auto}.main-content{margin-left:0;width:100%}body{display:block}.logo-container{height:55px}.sidebar>div:last-child{display:none}.admin-toolbar{position:relative}}
+        .commap-logo-wrap { display:flex;align-items:center;justify-content:flex-start;min-height:64px;margin:0 0 .75rem;padding:4px 8px; }
+        .commap-logo-wrap img { display:block;max-width:190px;width:auto;height:56px;object-fit:contain;object-position:left center; }
+        #commapLogoFallback { color:#f3bd3e;font-size:1.35rem;font-weight:900;letter-spacing:.04em; }
+    
+        /* Refinamento visual profissional: hierarquia compacta, densidade e mapa visível */
+        html { font-size: 14px; }
+        body { font-size: 13px; line-height: 1.5; }
+        .sidebar { width: 264px; padding: 1.35rem 1.1rem; overflow-y: auto; }
+        .main-content { margin-left: 264px; width: calc(100% - 264px); min-width: 0; }
+        .page-section { padding: 1.35rem; }
+        .hero-banner { position: relative; padding: 1.6rem 1.8rem 1.35rem; }
+        .hero-banner h2 { font-size: clamp(1.65rem, 2.4vw, 2.5rem) !important; line-height: 1.15; max-width: 900px; margin-bottom: .65rem; }
+        .hero-banner p { font-size: .9rem !important; line-height: 1.55; max-width: 780px; }
+        .hero-banner .badge { margin-bottom: .65rem !important; }
+        .hero-top-controls { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:.5rem; margin:0 0 1.1rem auto; }
+        .hero-top-controls label { color:#c7d1d6; white-space:nowrap; }
+        .hero-top-controls .toolbar-select { min-width:130px; max-width:190px; }
+        .hero-top-controls .btn { padding:7px 11px; font-size:.72rem; border-radius:8px; }
+        .dashboard-content { padding:1rem 1.1rem 1.5rem; }
+        .dashboard-audit-output { padding:0 1.1rem; }
+        .glass { border-radius:12px; }
+        .glass.p-8 { padding:1.1rem !important; }
+        .glass.p-6 { padding:1rem !important; }
+        .glass.p-5 { padding:.85rem !important; }
+        .grid { gap: .85rem !important; }
+        .metric-value { font-size:1.8rem !important; margin:.35rem 0; }
+        h1 { font-size:1.45rem !important; }
+        h2 { font-size:1.65rem !important; line-height:1.2; }
+        h3 { font-size:1rem !important; line-height:1.35; }
+        .text-6xl { font-size:2.4rem !important; }
+        .text-4xl { font-size:2rem !important; }
+        .text-3xl { font-size:1.55rem !important; }
+        .text-2xl { font-size:1.35rem !important; }
+        .text-xl { font-size:1.05rem !important; }
+        .text-lg { font-size:.95rem !important; }
+        .btn { padding:8px 13px; border-radius:8px; font-size:.78rem; }
+        .admin-toolbar { padding:.65rem 1rem; gap:.65rem; min-height:52px; }
+        .admin-toolbar .btn { padding:7px 10px; }
+        .chart-container { height:245px; margin-top:.5rem; padding:4px; }
+        .chart-container[style*="380px"] { height:270px !important; }
+        .map-box { height:360px; min-height:300px; border-width:1px; border-radius:10px; }
+        #leaflet-map { background:#e8e5df; }
+        .leaflet-container { font:12px/1.4 'Outfit',sans-serif; }
+        .custom-theme-control { padding:8px; border-radius:8px; }
+        .custom-theme-control select { max-width:190px; font-size:11px; padding:6px; }
+        .leaflet-control-layers { font-size:11px; }
+        .comparison-grid { grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:.7rem; }
+        .sidebar-link { padding:.7rem .8rem; font-size:.84rem; border-radius:8px; }
+        .sidebar .mb-8 { margin-bottom:1.1rem !important; }
+        .sidebar .space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top:.35rem; }
+        .lang-select { width:100%; padding:8px 10px; font-size:.8rem; }
+        .commap-logo-wrap { min-height:54px; margin:0 0 .5rem; }
+        .commap-logo-wrap img { max-width:165px; height:48px; }
+        .hero-top-controls .admin-only { display:none; }
+        body.admin-mode .hero-top-controls .admin-only, .admin-mode .hero-top-controls .admin-only { display:inline-flex; }
+        @media (max-width:1100px) {
+          .sidebar { width:230px; } .main-content { margin-left:230px; width:calc(100% - 230px); }
+          .hero-banner { padding:1.2rem 1.25rem; } .hero-top-controls { justify-content:flex-start; }
+          .dashboard-content { padding:.8rem; } .map-box { height:330px; }
+        }
+        @media (max-width:760px) {
+          .sidebar { position:relative; width:100%; height:auto; padding:1rem; }
+          .main-content { margin-left:0; width:100%; } body { display:block; }
+          .hero-top-controls { justify-content:flex-start; } .hero-top-controls .btn { flex:0 0 auto; }
+          .map-box { height:300px; } .chart-container { height:220px; }
+          .admin-toolbar { position:relative; flex-wrap:wrap; }
+          .admin-toolbar > .ml-auto { margin-left:0 !important; flex-wrap:wrap; gap:.45rem; }
+        }
+
+        /* Refinamento final: marca ComMap e interface mais compacta */
+        .commap-brand { display:flex; align-items:center; justify-content:center; gap:12px; width:100%; min-height:94px; margin:0 0 .8rem; padding:8px 4px 12px; border-bottom:1px solid rgba(240,138,36,.18); }
+        .commap-logo-wrap { flex:0 0 auto; width:92px; min-height:78px; height:78px; margin:0; padding:0; display:flex; align-items:center; justify-content:center; }
+        .commap-logo-wrap img { width:92px; height:78px; max-width:92px; object-fit:contain; object-position:center; }
+        #commapLogoFallback { width:92px; height:78px; align-items:center; justify-content:center; color:#ffc247; font-size:1.05rem; font-weight:900; }
+        .commap-brand-copy { min-width:0; text-align:left; line-height:1.12; }
+        .commap-brand-title { color:#f4f7f8; font-size:1.02rem; font-weight:900; letter-spacing:.01em; white-space:nowrap; }
+        .commap-brand-subtitle { margin-top:5px; color:#f0a13a; font-size:.78rem; font-weight:700; line-height:1.3; }
+        .lang-selector-container { margin-bottom:1rem !important; }
+        .sidebar { width:248px; padding:1rem .85rem; }
+        .main-content { margin-left:248px; width:calc(100% - 248px); }
+        .page-section { padding:1rem; }
+        .hero-banner { padding:1rem 1.35rem .9rem; }
+        .hero-banner h2 { font-size:clamp(1.35rem,1.8vw,1.9rem) !important; margin-bottom:.4rem; }
+        .hero-banner p { font-size:.82rem !important; line-height:1.45; }
+        .dashboard-content { padding:.75rem .85rem 1rem; }
+        .glass.p-8,.glass.p-6 { padding:.8rem !important; }
+        .grid { gap:.6rem !important; }
+        .metric-value { font-size:1.45rem !important; margin:.2rem 0; }
+        .chart-container { height:185px !important; min-height:160px; margin-top:.3rem; padding:2px; }
+        .chart-container[style*="380px"] { height:195px !important; }
+        .map-box { height:290px !important; min-height:260px; }
+        .sidebar-link { padding:.58rem .65rem; margin-bottom:3px; font-size:.78rem; }
+        .sidebar .mb-8 { margin-bottom:.8rem !important; }
+        .sidebar .space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top:.2rem; }
+        .badge { font-size:.66rem; padding:4px 9px; }
+        .admin-toolbar { padding:.5rem .75rem; min-height:44px; }
+        .comparison-grid { grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); }
+        @media(max-width:1100px) { .sidebar{width:220px}.main-content{margin-left:220px;width:calc(100% - 220px)} .map-box{height:270px!important} .chart-container{height:175px!important} }
+        @media(max-width:760px) { .commap-brand{justify-content:flex-start;min-height:78px}.commap-logo-wrap,.commap-logo-wrap img,#commapLogoFallback{width:76px;height:68px;max-width:76px}.commap-brand-title{font-size:.95rem}.commap-brand-subtitle{font-size:.72rem}.map-box{height:250px!important}.chart-container{height:190px!important} }
+
+
+
+        /* RESPONSIVIDADE MOBILE: mantém o layout desktop e adapta a navegação para Android */
+        html { width:100%; max-width:100%; overflow-x:hidden; -webkit-text-size-adjust:100%; }
+        body#app-body { width:100%; min-width:0; max-width:100%; overflow-x:hidden; }
+        img, canvas, svg, video { max-width:100%; }
+        .main-content, .page-section, .dashboard-content, .dashboard-audit-output { min-width:0; max-width:100%; }
+        .grid, [class*="grid-cols-"] { min-width:0; }
+        .grid > *, .comparison-grid > * { min-width:0; }
+        table { max-width:100%; }
+        .table-responsive, .overflow-x-auto { max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+        input, select, textarea, button { max-width:100%; }
+        @media (max-width: 760px) {
+          body#app-body { display:flex; flex-direction:column; align-items:stretch; }
+          .sidebar {
+            position:relative !important; inset:auto !important; order:0; width:100% !important; height:auto !important;
+            max-height:none !important; margin:0 !important; padding:12px 12px 10px !important;
+            overflow:visible !important; border-right:0 !important; border-bottom:1px solid #2b3a40;
+            box-shadow:0 5px 18px rgba(0,0,0,.25); z-index:20;
+          }
+          .sidebar > div:first-child { display:flex; flex-direction:column; min-width:0; }
+          .commap-brand { width:100%; min-height:64px !important; margin:0 0 10px !important; padding:4px 2px 10px !important; gap:10px !important; }
+          .commap-logo-wrap { flex:0 0 66px !important; width:66px !important; height:58px !important; min-height:58px !important; }
+          .commap-logo-wrap img, #commapLogoFallback { width:66px !important; height:58px !important; max-width:66px !important; object-fit:contain; }
+          .commap-brand-title { font-size:1rem !important; white-space:normal !important; }
+          .commap-brand-subtitle { font-size:.75rem !important; }
+          .lang-selector-container { margin:0 0 10px !important; padding:5px !important; }
+          .lang-select { min-height:42px; font-size:16px !important; }
+          #sidebar-brand-text { margin:0 0 10px !important; padding:0 !important; border:0 !important; }
+          #sidebar-brand-text h1 { font-size:1.25rem !important; }
+          #sidebar-brand-text p { font-size:.68rem !important; line-height:1.4; }
+          #nav-title-1, #nav-title-2 { display:none !important; }
+          #nav-menu-core, #nav-menu-custom {
+            display:flex !important; flex-direction:row !important; flex-wrap:nowrap !important; gap:7px !important;
+            width:100%; max-width:100%; margin:0 0 5px !important; padding:2px 0 7px;
+            overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:thin;
+          }
+          .sidebar-link {
+            flex:0 0 auto; width:auto; max-width:82vw; white-space:nowrap; margin:0 !important;
+            padding:10px 12px !important; font-size:.78rem !important; border:1px solid rgba(255,255,255,.07);
+            transform:none !important; min-height:40px; gap:7px;
+          }
+          .sidebar-link:hover, .sidebar-link.active { transform:none !important; }
+          .sidebar > div:last-child { display:none !important; }
+          .main-content { order:1; display:flex; flex-direction:column; width:100% !important; min-width:0 !important; margin:0 !important; }
+          .admin-toolbar { position:relative !important; top:auto !important; display:flex; flex-direction:column; align-items:stretch !important; gap:10px !important; padding:12px !important; }
+          .admin-toolbar > .flex, .admin-toolbar .ml-auto { display:flex; flex-wrap:wrap; align-items:stretch; gap:8px !important; width:100%; margin-left:0 !important; }
+          .admin-toolbar .btn { flex:1 1 100%; width:100%; min-height:42px; white-space:normal; }
+          .page-section { width:100% !important; padding:12px !important; overflow:visible; }
+          .hero-banner { width:100%; padding:18px 14px !important; }
+          .hero-banner h2 { font-size:clamp(1.45rem,6vw,2rem) !important; overflow-wrap:anywhere; }
+          .hero-banner p { font-size:.88rem !important; }
+          .hero-top-controls { display:flex; flex-direction:column; align-items:stretch !important; justify-content:flex-start !important; width:100%; gap:8px !important; margin:0 0 12px !important; }
+          .hero-top-controls label, .hero-top-controls select, .hero-top-controls button, .hero-top-controls .btn { width:100%; max-width:100% !important; white-space:normal; }
+          .dashboard-content, .dashboard-audit-output { padding:10px 12px 16px !important; }
+          .grid, [class*="grid-cols-"] { grid-template-columns:minmax(0,1fr) !important; }
+          .comparison-grid { grid-template-columns:minmax(0,1fr) !important; }
+          #origin-chart-card { grid-column:span 1 / span 1 !important; }
+          .glass { width:100%; min-width:0; padding:12px !important; border-radius:12px; }
+          .metric-value { font-size:1.8rem !important; overflow-wrap:anywhere; }
+          .chart-container, .chart-container[style*="380px"] { width:100% !important; height:240px !important; min-height:210px !important; padding:2px !important; }
+          #origin-chart-card .chart-container { height:270px !important; min-height:250px !important; }
+          .map-box { width:100% !important; height:280px !important; min-height:240px !important; }
+          .custom-theme-control { max-width:calc(100vw - 40px); }
+          .custom-theme-control select { max-width:100%; }
+          .badge { white-space:normal; }
+          .btn { min-height:40px; white-space:normal; }
+          .modal-box { width:calc(100% - 24px) !important; max-width:400px; padding:22px !important; max-height:90vh; overflow:auto; }
+          #loginModal { padding:12px; overflow:auto; }
+          footer { padding:14px !important; }
+        }
+        @media (max-width: 380px) {
+          .sidebar { padding:10px 9px !important; }
+          .commap-brand { gap:7px !important; }
+          .commap-logo-wrap, .commap-logo-wrap img, #commapLogoFallback { width:56px !important; max-width:56px !important; height:52px !important; }
+          .commap-brand-title { font-size:.9rem !important; }
+          .commap-brand-subtitle { font-size:.68rem !important; }
+          .page-section { padding:9px !important; }
+          .hero-banner { padding:15px 11px !important; }
+          .chart-container, .chart-container[style*="380px"] { height:215px !important; }
+        }
+        @media (min-width: 761px) {
+          body#app-body { display:flex; }
+          .sidebar { position:fixed; top:0; bottom:0; left:0; }
+          .main-content { margin-left:248px; width:calc(100% - 248px); }
+        }
+
+
+
+        /* APP SHELL RESPONSIVO: desktop preservado, navegação móvel em gaveta */
+        .mobile-appbar,.mobile-nav-scrim { display:none; }
+        .mobile-appbar { align-items:center;gap:12px; }
+        .mobile-menu-button { width:42px;height:42px;flex:0 0 42px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #34464d;border-radius:12px;background:#111c22;color:#f5f7f8;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.18);touch-action:manipulation; }
+        .mobile-menu-button:focus-visible,.sidebar-link:focus-visible { outline:2px solid var(--color-accent);outline-offset:3px; }
+        .mobile-appbar-title { min-width:0;flex:1;line-height:1.15; }
+        .mobile-appbar-title strong { display:block;font-size:.98rem;font-weight:900; }
+        .mobile-appbar-title span { display:block;margin-top:3px;color:#aebbc2;font-size:.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+        .mobile-current-section { max-width:42%;font-size:.72rem;font-weight:800;color:#f3bd3e;text-align:right; }
+        @media (max-width:760px) {
+          html,body#app-body { width:100%;max-width:100%;overflow-x:clip; }
+          body#app-body { display:block !important;min-height:100dvh;padding-top:64px; }
+          .mobile-appbar { display:flex;position:fixed;z-index:1200;top:0;left:0;right:0;min-height:64px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;background:rgba(8,13,16,.97);border-bottom:1px solid #26383e;box-shadow:0 5px 22px rgba(0,0,0,.3);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px); }
+          .mobile-nav-scrim { display:block;position:fixed;inset:0;z-index:1290;background:rgba(0,0,0,.62);opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s ease; }
+          body.mobile-nav-open .mobile-nav-scrim { opacity:1;visibility:visible; }
+          .sidebar { display:flex !important;position:fixed !important;z-index:1300 !important;top:0 !important;bottom:0 !important;left:0 !important;width:min(86vw,320px) !important;height:100dvh !important;max-height:100dvh !important;padding:calc(14px + env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom)) !important;margin:0 !important;overflow-x:hidden !important;overflow-y:auto !important;border:0 !important;border-right:1px solid #2b3c42 !important;border-radius:0 20px 20px 0 !important;box-shadow:18px 0 50px rgba(0,0,0,.48) !important;transform:translateX(-110%);visibility:hidden;transition:transform .24s cubic-bezier(.2,.8,.2,1),visibility .24s;overscroll-behavior:contain; }
+          body.mobile-nav-open .sidebar { transform:translateX(0);visibility:visible; }
+          .sidebar > div:first-child { display:block !important;min-width:0; }
+          .commap-brand { display:flex !important;align-items:center;gap:10px !important;min-height:62px !important;margin:0 0 14px !important;padding:4px 0 12px !important;border-bottom:1px solid #27373d; }
+          .commap-logo-wrap { flex:0 0 62px !important;width:62px !important;height:56px !important;min-height:56px !important;margin:0 !important;padding:0 !important; }
+          .commap-logo-wrap img { display:block !important;width:62px !important;height:56px !important;max-width:62px !important;object-fit:contain; }
+          #commapLogoFallback { width:62px !important;height:56px !important;max-width:62px !important;font-size:.78rem !important; }
+          .commap-brand-title { font-size:1rem !important;line-height:1.2; }
+          .commap-brand-subtitle { font-size:.7rem !important;line-height:1.3; }
+          .lang-selector-container { margin:0 0 14px !important;padding:7px !important; }
+          .lang-select { min-height:42px;font-size:16px !important; }
+          #sidebar-brand-text { margin:0 0 15px !important;padding:0 0 12px !important;border-bottom:1px solid #27373d !important; }
+          #sidebar-brand-text h1 { font-size:1.18rem !important; }
+          #sidebar-brand-text p { font-size:.68rem !important;line-height:1.45; }
+          #nav-title-1,#nav-title-2 { display:block !important;font-size:.62rem !important;letter-spacing:.13em;margin:12px 0 8px !important; }
+          #nav-menu-core,#nav-menu-custom { display:flex !important;flex-direction:column !important;flex-wrap:nowrap !important;gap:4px !important;width:100%;max-width:100%;margin:0 0 12px !important;padding:0 !important;overflow:visible !important; }
+          .sidebar-link { display:flex;align-items:center;width:100%;max-width:none;min-height:46px;flex:0 0 auto;white-space:normal;margin:0 !important;padding:11px 12px !important;font-size:.83rem !important;line-height:1.3;border:1px solid transparent;gap:10px; }
+          .sidebar-link > span:first-child { flex:0 0 24px;text-align:center;font-size:1rem; }
+          .sidebar-link .editable { min-width:0;overflow-wrap:anywhere; }
+          .sidebar-link:hover,.sidebar-link.active { transform:none !important; }
+          .sidebar > div:last-child { display:block !important;margin-top:18px !important;padding-top:12px !important; }
+          .sidebar > div:last-child .p-4 { padding:11px !important;margin-bottom:10px !important; }
+          .main-content { display:flex !important;flex-direction:column;width:100% !important;min-width:0 !important;max-width:100% !important;margin:0 !important;padding:0 !important; }
+          .admin-toolbar { position:static !important;display:flex;flex-direction:column;align-items:stretch !important;gap:9px !important;padding:12px !important;border-radius:0 !important; }
+          .admin-toolbar > .flex,.admin-toolbar .ml-auto { display:flex;flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:8px !important;width:100%;margin:0 !important; }
+          .admin-toolbar .btn { width:100%;min-height:42px;flex:0 0 auto;font-size:.78rem;white-space:normal; }
+          .page-section { display:none;width:100% !important;max-width:100% !important;min-width:0 !important;padding:12px !important;overflow:visible; }
+          .page-section.active { display:block; }
+          .hero-banner { width:100%;padding:18px 14px !important; }
+          .hero-banner h2 { font-size:clamp(1.35rem,5.6vw,1.85rem) !important;line-height:1.18;overflow-wrap:anywhere; }
+          .hero-banner p { font-size:.84rem !important;line-height:1.5; }
+          .hero-top-controls { display:flex;flex-direction:column;align-items:stretch !important;justify-content:flex-start !important;width:100%;gap:8px !important;margin:0 0 12px !important; }
+          .hero-top-controls label,.hero-top-controls select,.hero-top-controls button,.hero-top-controls .btn { width:100%;max-width:100% !important;white-space:normal; }
+          .dashboard-content,.dashboard-audit-output { width:100%;max-width:100%;padding:10px 12px 16px !important; }
+          .grid,.comparison-grid { display:grid !important;grid-template-columns:minmax(0,1fr) !important;gap:10px !important;width:100%; }
+          .grid:has(.metric-value) { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+          .grid:has(.metric-value) > * { min-width:0; }
+          #origin-chart-card { grid-column:1 / -1 !important; }
+          .glass { width:100%;min-width:0;max-width:100%;padding:12px !important;border-radius:13px; }
+          .metric-value { font-size:clamp(1.35rem,6vw,1.8rem) !important;line-height:1.05;overflow-wrap:anywhere; }
+          h1 { font-size:1.35rem !important;line-height:1.2; } h2 { font-size:1.45rem !important;line-height:1.22; } h3 { font-size:.98rem !important;line-height:1.35; }
+          p,li { overflow-wrap:anywhere; }
+          .chart-container,.chart-container[style*="380px"] { width:100% !important;height:235px !important;min-height:210px !important;margin-top:8px;padding:2px !important; }
+          #origin-chart-card .chart-container { height:265px !important;min-height:245px !important; }
+          .map-box { width:100% !important;height:300px !important;min-height:260px !important; }
+          .custom-theme-control { max-width:calc(100vw - 54px); } .custom-theme-control select { max-width:100%; }
+          .table-responsive,.overflow-x-auto { width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch; }
+          table { min-width:520px; }
+          input,select,textarea { min-height:42px;font-size:16px !important; }
+          .btn { min-height:42px;padding:10px 13px;white-space:normal;touch-action:manipulation; }
+          .modal-box { width:calc(100% - 24px) !important;max-width:400px;padding:20px !important;max-height:88dvh;overflow:auto; }
+          #loginModal { padding:12px;overflow:auto; } footer { padding:14px !important; }
+          body.mobile-nav-open { overflow:hidden; }
+        }
+        @media (max-width:390px) {
+          .mobile-appbar { gap:8px;padding-left:9px;padding-right:9px; }
+          .mobile-menu-button { width:40px;height:40px;flex-basis:40px; }
+          .mobile-appbar-title strong { font-size:.9rem; }
+          .mobile-current-section { max-width:34%;font-size:.65rem; }
+          .page-section { padding:9px !important; } .hero-banner { padding:15px 11px !important; }
+          .grid:has(.metric-value) { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+          .glass { padding:10px !important; }
+        }
+        @media (min-width:761px) { .mobile-appbar,.mobile-nav-scrim { display:none !important; } .sidebar { transform:none !important;visibility:visible !important; } }
+
+
+
+        /* Ajustes exclusivos para a versão web em telas grandes (PC).
+           A experiência móvel/Android permanece governada pelas regras existentes. */
+        @media (min-width: 1024px) {
+            body {
+                position: relative;
+                isolation: isolate;
+                background: #080d10 !important;
+            }
+            body::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                z-index: -1;
+                pointer-events: none;
+                background-image:
+                    linear-gradient(rgba(5, 11, 14, 0.78), rgba(5, 11, 14, 0.84)),
+                    url("/static/fundo_commap.png");
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                opacity: 1;
+            }
+            /* Deixa a imagem aparecer sutilmente nas áreas entre os cartões. */
+            .main-content,
+            .page-section,
+            .dashboard-content {
+                background: transparent !important;
+            }
+            /* Os três gráficos principais ficam em uma única linha no desktop. */
+            .dashboard-content > .grid:has(#origin-chart-card) {
+                display: grid !important;
+                grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+                align-items: stretch;
+                gap: 1rem !important;
+            }
+            .dashboard-content > .grid:has(#origin-chart-card) > #origin-chart-card {
+                grid-column: auto !important;
+                min-width: 0;
+            }
+            .dashboard-content > .grid:has(#origin-chart-card) > .glass {
+                min-width: 0;
+            }
+            .dashboard-content > .grid:has(#origin-chart-card) .chart-container {
+                width: 100% !important;
+                height: 260px !important;
+                min-height: 240px !important;
+            }
+            .dashboard-content > .grid:has(#origin-chart-card) canvas {
+                max-width: 100%;
+            }
+        }
+
+</style>
+</head>
+<body id="app-body">
+    <header class="mobile-appbar" aria-label="Navegação do aplicativo">
+        <button class="mobile-menu-button" id="mobileMenuButton" type="button" aria-label="Abrir menu" aria-controls="appSidebar" aria-expanded="false" onclick="toggleMobileNav()">
+            <svg id="mobileMenuIcon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div class="mobile-appbar-title"><strong>ComMap-TEC</strong><span>Friends of Fizi · Painel analítico</span></div>
+        <div class="mobile-current-section" id="mobileCurrentSection">Cartografia</div>
+    </header>
+    <div class="mobile-nav-scrim" id="mobileNavScrim" onclick="closeMobileNav()" aria-hidden="true"></div>
+
+    <div id="loader">
+        <div class="spinner mb-4"></div>
+        <p id="loader-text" class="text-[var(--color-primary)] font-bold tracking-widest uppercase">Processando Dados Espaciais e Estatísticos...</p>
+    </div>
+
+    <div id="loginModal">
+        <div class="modal-box flex flex-col gap-5">
+            <div class="logo-container mx-auto mb-2" style="height: 60px;"></div>
+            <h2 id="modal-title" class="text-2xl font-black text-center text-white">Acesso Administrativo</h2>
+            <p id="modal-desc" class="text-sm text-gray-400 text-center mb-4">Módulo de Edição, Estruturação e Upload de Base de Dados.</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label id="label-user" class="text-xs font-bold text-[var(--color-accent)] uppercase tracking-wider">Usuário</label>
+                    <input type="text" id="adminUser" placeholder="Ex: admin" class="w-full p-3 rounded-xl bg-black border border-gray-700 text-white outline-none focus:border-[var(--color-primary)] mt-1 transition">
+                </div>
+                <div>
+                    <label id="label-pass" class="text-xs font-bold text-[var(--color-accent)] uppercase tracking-wider">Senha</label>
+                    <input type="password" id="adminPass" placeholder="••••••••" class="w-full p-3 rounded-xl bg-black border border-gray-700 text-white outline-none focus:border-[var(--color-primary)] mt-1 transition">
+                </div>
+            </div>
+            
+            <button id="btn-login-submit" onclick="authenticate()" class="btn btn-primary w-full justify-center mt-4">Desbloquear Sistema</button>
+            <button id="btn-login-close" onclick="closeLogin()" class="text-sm text-gray-500 hover:text-white transition">Voltar ao Modo Leitura</button>
+        </div>
+    </div>
+
+    <aside class="sidebar" id="appSidebar" aria-label="Menu principal">
+        <div>
+            <div class="logo-container"></div>
+            <div class="commap-brand" aria-label="ComMap-TEC — Trilha Formativa">
+                <div class="commap-logo-wrap">
+                    <img id="commapLogo" src="/static/1_logo_color_ComMap.png" alt="Logo ComMap" onerror="this.style.display='none'; document.getElementById('commapLogoFallback').style.display='flex';">
+                    <div id="commapLogoFallback" style="display:none">ComMap</div>
+                </div>
+                <div class="commap-brand-copy">
+                    <div class="commap-brand-title">ComMap-TEC</div>
+                    <div class="commap-brand-subtitle">Trilha<br>Formativa</div>
+                </div>
+            </div>
+            
+            <div class="lang-selector-container">
+                <select id="langSelect" onchange="changeLanguage(this.value)" class="lang-select">
+                    <option value="pt">🇧🇷 Português (PT)</option>
+                    <option value="en">🇺🇸 English (EN)</option>
+                    <option value="es">🇪🇸 Español (ES)</option>
+                </select>
+            </div>
+
+            <div class="mb-8 editable" id="sidebar-brand-text">
+                <h1 class="text-2xl font-black text-white">Friends of Fizi</h1>
+                <p id="sub-brand" class="text-[var(--color-primary)] text-[10px] font-bold uppercase tracking-widest mt-1">Plataforma Comunitária & Acadêmica</p>
+            </div>
+            
+            <p id="nav-title-1" class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-3">Navegação Analítica</p>
+            <div id="nav-menu-core" class="space-y-2 mb-8">
+                <div id="link-tab-dashboard" class="sidebar-link active" onclick="switchTab('tab-dashboard', this)">
+                    <span>🗺️</span> <span class="editable" data-key="nav-dash" data-i18n="nav-dash">Cartografia & Demografia</span>
+                </div>
+                <div id="link-tab-nutrition" class="sidebar-link" onclick="switchTab('tab-nutrition', this)">
+                    <span>🍲</span> <span class="editable" data-key="nav-nutr" data-i18n="nav-nutr">Nutrição & Modais Completos</span>
+                </div>
+                <div id="link-tab-alerts" class="sidebar-link" onclick="switchTab('tab-alerts', this)">
+                    <span>⚠️</span> <span class="editable" data-key="nav-alerts" data-i18n="nav-alerts">Casos Críticos (Triagem)</span>
+                </div>
+                <div id="link-tab-compare" class="sidebar-link" onclick="switchTab('tab-compare', this)">
+                    <span>📈</span> <span data-i18n="nav-compare">Comparar bases de dados</span>
+                </div>
+                <div id="link-tab-fizi-site" class="sidebar-link" onclick="openFiziSite(this)">
+                    <span>🌍</span> <span>Saiba mais sobre a Fizi School</span>
+                </div>
+            </div>
+
+            <p id="nav-title-2" class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-3">Documentos e Relatórios</p>
+            <div id="nav-menu-custom" class="space-y-2"></div>
+        </div>
+        
+        <div class="mt-auto pt-8">
+            <button id="btn-add-tab" class="btn btn-outline admin-only w-full justify-center mb-4 text-sm" onclick="createNewTabPrompt()">+ Adicionar Nova Aba</button>
+            
+            <div class="p-4 bg-black/40 rounded-xl border border-white/5 text-xs text-gray-400 mb-4 text-center">
+                <p class="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-1">Desenvolvido em parceria com</p>
+                <p class="font-black text-[var(--color-primary)] text-sm tracking-wide">Universidade Federal da Bahia Engenharia</p>
+                <p class="text-[10px] text-gray-300 font-medium mt-1">ComMap-Edu | UFBA</p>
+            </div>
+
+            <div class="p-4 bg-black/40 rounded-xl border border-white/5 text-xs text-gray-400">
+                <span id="status-prefix" class="block text-[var(--color-primary)] font-bold mb-1">Status do Sistema:</span>
+                <span id="db-status-indicator">● Aguardando Banco de Dados</span>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        
+        <div class="admin-toolbar admin-only">
+            <div class="flex items-center gap-3">
+                <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                <span id="toolbar-title" class="text-sm font-black text-white uppercase tracking-widest">Painel de Edição Ativo</span>
+            </div>
+            
+            <div class="ml-auto flex gap-4">
+                <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" class="hidden" />
+                <button id="btn-import-data" onclick="document.getElementById('excelFile').click()" class="btn btn-outline text-xs border-[var(--color-success)] text-[var(--color-success)] hover:bg-[var(--color-success)] hover:text-white">
+                    📁 Importar Questionário (.CSV)
+                </button>
+                
+                <input type="file" id="mediaUpload" accept="image/*,application/pdf" class="hidden" onchange="handleMediaUpload(event)"/>
+                <button id="btn-insert-media" onclick="document.getElementById('mediaUpload').click()" class="btn btn-outline text-xs">
+                    🖼️ Inserir Mídia/PDF na Aba
+                </button>
+                
+                <button id="btn-exit-editor" onclick="exitAdmin()" class="btn btn-primary text-xs bg-red-600 hover:bg-red-700 border-none">
+                    Sair do Editor
+                </button>
+            </div>
+        </div>
+
+        <div id="pages-container" class="flex-1">
+
+            <section id="tab-dashboard" class="page-section active p-0">
+                <div class="hero-banner">
+                    <div class="hero-top-controls">
+                        <label class="font-bold text-xs" for="datasetFilter">Base de dados</label>
+                        <select id="datasetFilter" class="toolbar-select" onchange="applyDatasetFilter()"><option value="all">Todas as bases de dados</option></select>
+                        <button class="btn btn-outline text-xs admin-only" onclick="deleteSelectedDataset()" title="Exclui permanentemente a planilha selecionada">🗑️ Excluir planilha</button>
+                        <button class="btn btn-outline text-xs" onclick="exportFilteredData()" data-i18n="export-label">Exportar dados filtrados</button>
+                        <button class="btn btn-outline text-xs admin-only" onclick="runDataAudit()" data-i18n="audit-run">Auditar dados</button>
+                    </div>
+                    <div id="dash-badge" class="badge badge-primary mb-4 inline-block">Análise Comunitária Estruturada e Geoespacial</div>
+                    <h2 class="text-4xl lg:text-6xl font-black mb-4 editable w-full" id="dash-title">Mapeando o Futuro de <span class="text-[var(--color-primary)]">Kabiria</span></h2>
+                    <p class="text-gray-300 max-w-3xl text-lg editable" id="dash-subtitle">
+                        Painel interativo gerado a partir de dados de campo da Fizi School. Os gráficos abaixo cruzam automaticamente todos os perfis demográficos e educacionais disponíveis na base.
+                    </p>
+                </div>
+
+                <div class="dashboard-audit-output"><div id="auditOutput"></div></div>
+                <div class="dashboard-content space-y-6 mt-2">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                        <div class="glass p-4 border-t-4 border-[var(--color-primary)] text-center">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Amostragem</p>
+                            <p class="metric-value text-white text-3xl" id="kpi-total">-</p>
+                            <p class="text-xs text-[var(--color-primary)] font-bold">Crianças Pesquisadas</p>
+                        </div>
+                        <div class="glass p-4 border-t-4 border-[var(--color-secondary)] text-center">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Refugiados</p>
+                            <p class="metric-value text-[var(--color-secondary)] text-3xl" id="kpi-refugees">-</p>
+                            <p class="text-xs text-gray-400 font-bold">Impacto Migratório</p>
+                        </div>
+                        <div class="glass p-4 border-t-4 border-[var(--color-accent)] text-center">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Média Etária</p>
+                            <p class="metric-value text-[var(--color-accent)] text-3xl" id="kpi-age">-</p>
+                            <p class="text-xs text-gray-400 font-bold">Anos de Idade</p>
+                        </div>
+                        <div class="glass p-4 border-t-4 border-[#10b981] text-center">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Distância Média</p>
+                            <p class="metric-value text-[#10b981] text-3xl" id="kpi-distance">-</p>
+                            <p class="text-xs text-gray-400 font-bold">Até a Fizi School (Km)</p>
+                        </div>
+                        <div class="glass p-4 border-t-4 border-[#6867ac] text-center">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Deslocamento</p>
+                            <p class="metric-value text-[#6867ac] text-3xl" id="kpi-walk">-</p>
+                            <p class="text-xs text-gray-400 font-bold">Acesso a Pé</p>
+                        </div>
+                        <div class="glass p-4 border-t-4 border-red-500 text-center">
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Risco Alimentar</p>
+                            <p class="metric-value text-red-500 text-3xl" id="kpi-food-danger">-</p>
+                            <p class="text-xs text-gray-400 font-bold">Nutrição Crítica</p>
+                        </div>
+                    </div>
+
+                    <div class="glass p-6">
+                        <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
+                            <div>
+                                <h3 id="map-title" class="text-xl font-black text-white">Inteligência <span class="text-[var(--color-primary)]">Geoespacial Cartográfica</span></h3>
+                                <p id="map-desc" class="text-xs text-gray-400 mt-1">Utilize o controle no canto superior direito do mapa para alternar entre todas as camadas temáticas possíveis extraídas do banco de dados.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="relative">
+                            <div id="leaflet-map" class="map-box shadow-inner"></div>
+                        </div>
+                        
+                        <div id="map-legend-container" class="flex flex-wrap gap-6 mt-4 text-xs font-bold text-gray-400 justify-center border-t border-white/5 pt-4">
+                            </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="glass p-6" id="origin-chart-card">
+                            <h3 class="text-lg font-black mb-1 editable">Origem (Nacionalidade)</h3>
+                            <p class="text-xs text-gray-400 mb-4 editable">Distribuição de locais de nascimento.</p>
+                            <div class="chart-container"><canvas id="chart-origin"></canvas></div>
+                        </div>
+                        <div class="glass p-6">
+                            <h3 class="text-lg font-black mb-1 editable">Identidade Étnico-Racial</h3>
+                            <p class="text-xs text-gray-400 mb-4 editable">Autoidentificação dos alunos registrados.</p>
+                            <div class="chart-container"><canvas id="chart-identity"></canvas></div>
+                        </div>
+                        <div class="glass p-6">
+                            <h3 class="text-lg font-black mb-1 editable">Pirâmide de Gênero Global</h3>
+                            <p class="text-xs text-gray-400 mb-4 editable">Divisão sexual da amostragem total.</p>
+                            <div class="chart-container"><canvas id="chart-gender"></canvas></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="glass p-6">
+                            <h3 class="text-lg font-black mb-1 editable">Matrículas: Série Escolar x Gênero</h3>
+                            <p class="text-xs text-gray-400 mb-4 editable">Volume de alunos por grau na Fizi com quebra demográfica.</p>
+                            <div class="chart-container"><canvas id="chart-grade-gender"></canvas></div>
+                        </div>
+                        <div class="glass p-6">
+                            <h3 class="text-lg font-black mb-1 editable">Distribuição por Faixa Etária</h3>
+                            <p class="text-xs text-gray-400 mb-4 editable">Análise da pirâmide de idades para alocação de recursos pedagógicos.</p>
+                            <div class="chart-container"><canvas id="chart-age-dist"></canvas></div>
+                        </div>
+                    </div>
+                    
+                    <div class="glass p-6">
+                        <h3 class="text-lg font-black mb-1 editable">Classificação Familiar Estrutural</h3>
+                        <p class="text-xs text-gray-400 mb-4 editable">Agrupamento sociofamiliar baseado nas tipologias registradas pelo formulário.</p>
+                        <div class="chart-container"><canvas id="chart-family-class"></canvas></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-nutrition" class="page-section">
+                <header class="mb-10">
+                    <div id="nutr-badge" class="badge badge-secondary mb-3">Analytics, Nutrição & Logística Completa</div>
+                    <h2 id="nutr-title" class="text-4xl font-black mb-3 editable text-white">Cruzamento <span class="text-[var(--color-secondary)]">Socioeconômico Completo</span></h2>
+                    <p id="nutr-desc" class="text-gray-400 max-w-4xl text-lg editable">Análise exaustiva da rotina dos alunos. Gráficos detalham exatamente QUAIS refeições faltam e cruzam modais de transporte com as distâncias geográficas calculadas.</p>
+                </header>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <div class="glass p-8">
+                        <div>
+                            <h3 class="text-xl font-black editable">Disponibilidade Alimentar (Casa)</h3>
+                            <p class="text-sm text-gray-400 mt-1 editable">Comparativo da % de crianças com acesso a CADA tipo de refeição.</p>
+                        </div>
+                        <div class="chart-container" style="height: 380px;"><canvas id="chart-food"></canvas></div>
+                        <div class="ai-insight-box"><span>Detalhamento Nutricional</span>Acesso individualizado a Café, Almoço e Jantar durante os períodos solicitados.</div>
+                    </div>
+
+                    <div class="glass p-8">
+                        <div>
+                            <h3 class="text-xl font-black editable">Risco Nutricional por País de Origem</h3>
+                            <p class="text-sm text-gray-400 mt-1 editable">Fatia de cada grupo nacional que não atinge segurança alimentar básica.</p>
+                        </div>
+                        <div class="chart-container" style="height: 380px;"><canvas id="chart-food-origin"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <div class="glass p-8">
+                        <h3 class="text-xl font-black mb-2 editable">Quebra Exata de Refeições Faltantes (Semana)</h3>
+                        <p class="text-sm text-gray-400 mb-6 editable">Quais refeições as crianças mais têm acesso de segunda a sexta?</p>
+                        <div class="chart-container"><canvas id="chart-meal-detail-week"></canvas></div>
+                    </div>
+                    
+                    <div class="glass p-8">
+                        <h3 class="text-xl font-black mb-2 editable">Quebra Exata de Refeições Faltantes (Fim de Semana)</h3>
+                        <p class="text-sm text-gray-400 mb-6 editable">Quais refeições as crianças mais têm acesso sábado e domingo?</p>
+                        <div class="chart-container"><canvas id="chart-meal-detail-weekend"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="glass p-8 mb-8">
+                    <h3 class="text-xl font-black mb-2 editable">Modal de Transporte Utilizado</h3>
+                    <p class="text-sm text-gray-400 mb-6 editable">Como os alunos enfrentam o ambiente urbano para chegar à instituição.</p>
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 items-center">
+                        <div class="chart-container"><canvas id="chart-transport"></canvas></div>
+                        <div class="flex flex-col justify-center gap-4 text-gray-300 h-full">
+                            <p class="bg-black/30 p-5 rounded-xl border-l-4 border-[var(--color-primary)]">A análise completa mostra a dependência total do caminhar (A Pé) ou do Transporte Público, indicando baixa motorização privada familiar na região mapeada.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="glass p-8">
+                    <h3 class="text-xl font-black mb-2 editable">Distância Calculada (GIS) vs Modal</h3>
+                    <p class="text-sm text-gray-400 mb-6 editable">Cruzamento da distância geodésica reta da casa até a Fizi School com o modal adotado.</p>
+                    <div class="chart-container"><canvas id="chart-distance-modal"></canvas></div>
+                </div>
+            </section>
+
+            <section id="tab-alerts" class="page-section">
+                <header class="mb-8">
+                    <h2 class="text-3xl font-black editable text-white" id="alerts-title"><span class="text-red-500">Alerta:</span> Triagem Prioritária</h2>
+                    <p id="alerts-desc" class="text-gray-400 mt-2 editable">O algoritmo analisa a base de dados em tempo real e lista as famílias cujos questionários apontam extrema vulnerabilidade cumulativa.</p>
+                </header>
+
+                <div class="glass overflow-hidden border border-red-900/40">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-red-950 bg-opacity-40 border-b border-red-900/50 text-xs font-bold uppercase tracking-wider text-red-300">
+                                    <th class="p-4" id="th-id">Identificador</th>
+                                    <th class="p-4" id="th-fam">Família</th>
+                                    <th class="p-4" id="th-ori">Origem</th>
+                                    <th class="p-4" id="th-age">Idade</th>
+                                    <th class="p-4" id="th-meals">Refeições Casa (Semana)</th>
+                                    <th class="p-4 text-center" id="th-status">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="critical-table-body" class="text-sm divide-y divide-white/5 text-gray-300">
+                                <tr>
+                                    <td colspan="6" class="p-8 text-center text-gray-500 italic" id="td-empty">Banco de dados ausente ou em formatação incorreta.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-compare" class="page-section">
+                <header class="mb-8">
+                    <div class="badge badge-primary mb-3">Análise longitudinal</div>
+                    <h2 class="text-3xl font-black mb-3">Comparação entre <span style="color:var(--color-primary)">bases de dados</span></h2>
+                    <p class="max-w-4xl">Compare indicadores calculados a partir das bases importadas. As variações mostram diferenças observadas entre os levantamentos, não comprovam por si só causalidade.</p>
+                </header>
+                <div class="glass p-6 mb-6 flex flex-wrap gap-4 items-center">
+                    <label class="font-bold">Base de dados A</label><select id="compareYearA" class="toolbar-select" onchange="renderYearComparison()"></select>
+                    <label class="font-bold" data-i18n="compare-label">Comparar com</label><select id="compareYearB" class="toolbar-select" onchange="renderYearComparison()"></select>
+                    <button class="btn btn-primary" onclick="renderYearComparison()">Atualizar comparação</button>
+                </div>
+                <div id="comparisonSummary" class="comparison-grid mb-6"></div>
+                <div class="glass p-6 mb-6" id="comparisonFindings" aria-live="polite"><h3 class="text-lg font-black mb-2">O que mudou entre os anos</h3><p class="text-sm">Selecione dois anos para gerar uma leitura automática das diferenças observadas.</p></div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass p-6"><h3 class="text-lg font-black">Indicadores sociais (%)</h3><div class="chart-container"><canvas id="chart-year-rates"></canvas></div></div>
+                    <div class="glass p-6"><h3 class="text-lg font-black">Perfil demográfico</h3><div class="chart-container"><canvas id="chart-year-demography"></canvas></div></div>
+                </div>
+                <div class="glass p-6 mt-6"><h3 class="text-lg font-black">Auditoria de integridade da exportação</h3><p class="text-sm mt-2">A auditoria verifica contagem de registros, campos essenciais ausentes, UUID duplicado e coordenadas inválidas. Para comprovar equivalência com uma planilha exportada, compare o CSV de saída com o arquivo original e mantenha o arquivo-fonte preservado.</p><div id="compareAuditOutput"></div></div>
+            </section>
+
+            <section id="tab-fizi-site" class="page-section">
+                <header class="mb-5 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <div class="badge badge-primary mb-3">Conheça a instituição</div>
+                        <h2 class="text-3xl font-black mb-2">Saiba mais sobre a <span style="color:var(--color-primary)">Fizi School</span></h2>
+                        <p class="max-w-4xl">Explore o site oficial da Fizi School sem sair do ComMap-TEC. Você pode navegar pelas páginas disponíveis na janela abaixo.</p>
+                    </div>
+                    <a class="btn btn-primary" href="https://fizischool.com/" target="_blank" rel="noopener noreferrer">Abrir em nova aba ↗</a>
+                </header>
+                <div class="glass p-2 md:p-3" style="height:calc(100vh - 245px);min-height:520px;overflow:hidden">
+                    <iframe id="fiziSiteFrame" src="https://fizischool.com/" title="Site oficial da Fizi School" style="width:100%;height:100%;border:0;border-radius:10px;background:#fff" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen"></iframe>
+                </div>
+                <p class="text-xs text-gray-400 mt-3">Se o site oficial impedir a exibição incorporada por uma política de segurança, use “Abrir em nova aba” para continuar navegando.</p>
+            </section>
+
+        </div>
+
+        <footer class="p-6 border-t border-white/5 flex flex-col sm:flex-row justify-between items-center mt-auto bg-[#0a0705] gap-4">
+            <div class="text-xs text-gray-500 text-center sm:text-left">
+                <p id="footer-p1" class="font-bold editable text-[var(--color-primary)]">Plataforma Tecnológica Desenvolvida por Universidade Federal da Bahia Engenharia & ComMap - Edu.</p>
+                <p id="footer-p2" class="editable mt-1">© 2026 Friends of Fizi Kabiria. Arquitetura de Dados para Impacto Social e Cartografia.</p>
+            </div>
+            <button id="footer-lock-btn" onclick="openLogin()" class="p-3 bg-white/5 rounded-full hover:bg-white/10 transition" title="Acessar Sistema Central">
+                🔒
+            </button>
+        </footer>
+    </main>
+
+    <script>
+        console.log("🚀 Fizi School Analytics Engine v5.0 (Full Extraction) Powered by Universidade Federal da Bahia");
+
+        let currentLang = 'pt';
+        const langData = {
+            pt: { tdEmpty: "Banco de dados ausente ou em formatação incorreta.", statusActive: "● Banco Ativo & Cruzado" },
+            en: { tdEmpty: "Data source missing or incorrectly formatted.", statusActive: "● Database active and cross-matched" },
+            es: { tdEmpty: "Base de datos ausente o con formato incorrecto.", statusActive: "● Base de datos activa y cruzada" }
+        };
+        const translations = {
+          en: {
+            "Processando Dados Espaciais e Estatísticos...":"Processing spatial and statistical data...","Acesso Administrativo":"Administrator Access","Módulo de Edição, Estruturação e Upload de Base de Dados.":"Data editing, structuring and upload module.","Usuário":"Username","Senha":"Password","Desbloquear Sistema":"Unlock System","Voltar ao Modo Leitura":"Return to Read-Only Mode","Plataforma Comunitária & Acadêmica":"Community & Academic Platform","Navegação Analítica":"Analytics Navigation","Cartografia & Demografia":"Cartography & Demographics","Nutrição & Modais Completos":"Nutrition & Access Modes","Nutrição & Indicadores":"Nutrition & Indicators","Casos Críticos (Triagem)":"Critical Cases (Screening)","Casos Críticos":"Critical Cases","Comparar anos":"Compare Years","Documentos e Relatórios":"Documents & Reports","+ Adicionar Nova Aba":"+ Add New Tab","Desenvolvido em parceria com":"Developed in partnership with","Status do Sistema:":"System Status:","● Aguardando Banco de Dados":"● Waiting for Data","Painel de Edição Ativo":"Editing Panel Active","📁 Importar Questionário (.CSV)":"📁 Import Questionnaire (.CSV)","🖼️ Inserir Mídia/PDF na Aba":"🖼️ Insert Media/PDF into Tab","Sair do Editor":"Exit Editor","Análise Comunitária Estruturada e Geoespacial":"Structured Geospatial Community Analysis","Mapeando o Futuro de":"Mapping the Future of","Painel interativo gerado a partir de dados de campo da Fizi School. Os gráficos abaixo cruzam automaticamente todos os perfis demográficos e educacionais disponíveis na base.":"Interactive dashboard built from Fizi School field data. The charts cross-reference all demographic and educational profiles available in the dataset.","Ano da pesquisa":"Database","Todos os anos":"All years","Exportar dados filtrados":"Export Filtered Data","Auditar dados":"Audit Data","Amostragem":"Sample Size","Crianças Pesquisadas":"Children Surveyed","Crianças pesquisadas":"Children surveyed","Refugiados":"Refugees","Impacto Migratório":"Migration Impact","Média Etária":"Average Age","Média de idade":"Average age","Anos de Idade":"Years Old","Distância Média":"Average Distance","Até a Fizi School (Km)":"To Fizi School (km)","Deslocamento":"Travel","Acesso a Pé":"Walking Access","Risco Alimentar":"Food Insecurity","Nutrição Crítica":"Critical Nutrition","Inteligência":"Intelligence","Geoespacial Cartográfica":"Geospatial Cartography","Utilize o controle no canto superior direito do mapa para alternar entre todas as camadas temáticas possíveis extraídas do banco de dados.":"Use the control in the map's upper-right corner to switch between thematic layers derived from the dataset.","Origem (Nacionalidade)":"Origin (Nationality)","Distribuição de locais de nascimento.":"Distribution of birthplaces.","Identidade Étnico-Racial":"Ethnic-Racial Identity","Autoidentificação dos alunos registrados.":"Self-identification of registered students.","Pirâmide de Gênero Global":"Overall Gender Pyramid","Divisão sexual da amostragem total.":"Gender distribution across the full sample.","Matrículas: Série Escolar x Gênero":"Enrollment: School Grade × Gender","Volume de alunos por grau na Fizi com quebra demográfica.":"Number of students by grade at Fizi, broken down demographically.","Distribuição por Faixa Etária":"Age Group Distribution","Análise da pirâmide de idades para alocação de recursos pedagógicos.":"Age-pyramid analysis to guide the allocation of educational resources.","Classificação Familiar Estrutural":"Household Structure Classification","Agrupamento sociofamiliar baseado nas tipologias registradas pelo formulário.":"Socio-family grouping based on categories recorded in the questionnaire.","Analytics, Nutrição & Logística Completa":"Analytics, Nutrition & Complete Logistics","Cruzamento":"Cross-Analysis","Socioeconômico Completo":"Full Socioeconomic Analysis","Análise exaustiva da rotina dos alunos. Gráficos detalham exatamente QUAIS refeições faltam e cruzam modais de transporte com as distâncias geográficas calculadas.":"Comprehensive analysis of students' routines. Charts show exactly WHICH meals are missing and cross-reference transport modes with calculated geographic distances.","Disponibilidade Alimentar (Casa)":"Food Availability (Home)","Comparativo da % de crianças com acesso a CADA tipo de refeição.":"Comparison of the percentage of children with access to EACH meal type.","Detalhamento Nutricional":"Nutritional Details","Acesso individualizado a Café, Almoço e Jantar durante os períodos solicitados.":"Individual access to breakfast, lunch and dinner during the requested periods.","Risco Nutricional por País de Origem":"Nutritional Risk by Country of Origin","Fatia de cada grupo nacional que não atinge segurança alimentar básica.":"Share of each national group that does not meet basic food security.","Quebra Exata de Refeições Faltantes (Semana)":"Exact Breakdown of Missing Meals (Weekdays)","Quais refeições as crianças mais têm acesso de segunda a sexta?":"Which meals do children have access to most from Monday to Friday?","Quebra Exata de Refeições Faltantes (Fim de Semana)":"Exact Breakdown of Missing Meals (Weekend)","Quais refeições as crianças mais têm acesso sábado e domingo?":"Which meals do children have access to most on Saturday and Sunday?","Modal de Transporte Utilizado":"Transport Mode Used","Como os alunos enfrentam o ambiente urbano para chegar à instituição.":"How students navigate the urban environment to reach the school.","A análise completa mostra a dependência total do caminhar (A Pé) ou do Transporte Público, indicando baixa motorização privada familiar na região mapeada.":"The analysis shows reliance on walking or public transport, indicating low household private vehicle use in the mapped area.","Distância Calculada (GIS) vs Modal":"Calculated Distance (GIS) vs. Transport Mode","Alerta:":"Alert:","Triagem Prioritária":"Priority Screening","O algoritmo analisa a base de dados em tempo real e lista as famílias cujos questionários apontam extrema vulnerabilidade cumulativa.":"The algorithm analyzes the dataset in real time and lists families whose questionnaires indicate extreme cumulative vulnerability.","Identificador":"Identifier","Família":"Family","Origem":"Origin","Idade":"Age","Refeições Casa (Semana)":"Meals at Home (Week)","Status":"Status","Banco de dados ausente ou em formatação incorreta.":"Data source missing or incorrectly formatted.","Análise longitudinal":"Database comparison","Comparação entre":"Comparison between","anos de pesquisa":"databases","Compare indicadores calculados a partir das bases importadas. As variações mostram diferenças observadas entre os levantamentos, não comprovam por si só causalidade.":"Compare indicators calculated from imported datasets. Differences show observed changes between surveys and do not, by themselves, prove causation.","Ano A":"Year A","Comparar com":"Compare with","Atualizar comparação":"Update Comparison","Indicadores sociais (%)":"Social Indicators (%)","Perfil demográfico":"Demographic Profile","Auditoria de integridade da exportação":"Export Integrity Audit","A auditoria verifica contagem de registros, campos essenciais ausentes, UUID duplicado e coordenadas inválidas. Para comprovar equivalência com uma planilha exportada, compare o CSV de saída com o arquivo original e mantenha o arquivo-fonte preservado.":"The audit checks record counts, missing essential fields, duplicate UUIDs and invalid coordinates. To verify equivalence with an exported spreadsheet, compare the output CSV with the original file and preserve the source file.","Plataforma Tecnológica Desenvolvida por Universidade Federal da Bahia Engenharia & ComMap - Edu.":"Technology platform developed by Universidade Federal da Bahia Engineering & ComMap-Edu.","© 2026 Friends of Fizi Kabiria. Arquitetura de Dados para Impacto Social e Cartografia.":"© 2026 Friends of Fizi Kabiria. Data architecture for social impact and cartography.","Acesso Negado.":"Access Denied.","Deseja sair do Modo Editor?":"Do you want to exit Edit Mode?","Não há dados para exportar.":"There is no data to export.","Apenas o administrador pode criar abas.":"Only the administrator can create tabs.","Nome da nova aba:":"New tab name:","Selecione uma aba antes de inserir mídia.":"Select a tab before inserting media.","Área editorial. Use “Inserir Mídia/PDF” para anexar conteúdo durante esta sessão.":"Editorial area. Use “Insert Media/PDF” to attach content during this session.","Abrir PDF: ":"Open PDF: ","Protocolo Ativado.":"Protocol Activated.","Nenhum dado crítico.":"No critical data.","Café da Manhã":"Breakfast","Almoço":"Lunch","Jantar":"Dinner","Padrão":"Standard","Risco Severo":"Severe Risk","A Pé":"On Foot","Transporte Público":"Public Transport","O Tamanho do círculo reflete a idade da criança.":"Circle size reflects the child's age.","Mapa Urbano Dark":"Dark Urban Map","Google Satélite":"Google Satellite","🗺️ Mapas Temáticos":"🗺️ Thematic Maps","⚠️ Risco Alimentar":"⚠️ Food Insecurity","🚶 Modais de Acesso":"🚶 Access Modes","📊 Idade / Densidade":"📊 Age / Density","📚 Série Escolar":"📚 School Grade","🌍 Origem (Nacionalidade)":"🌍 Origin (Nationality)","🏠 Tipo de Família":"🏠 Family Type","Sede Operacional":"Operational Headquarters","Relatório de integridade":"Integrity report","Esta checagem avalia a base carregada e a exportação produzida pelo site. Não valida respostas contra a fonte externa original; para isso, compare os arquivos e o total de linhas no software de origem.":"This check evaluates the loaded dataset and the export produced by the site. It does not validate responses against the original external source; compare the files and row totals in the source software for that.","Variação:":"Change:"," registros":" records"," anos":" years"," p.p.":" pp","Total de crianças":"Total children","Risco alimentar estimado":"Estimated food insecurity","Acesso a pé":"Walking access","Nascidos fora do Quênia*":"Born outside Kenya*","Cruzamento da distância geodésica reta da casa até a Fizi School com o modal adotado.":"Cross-analysis of the straight-line geodesic distance from home to Fizi School and the transport mode used.","Identidade Étnico-Racial":"Ethnic-Racial Identity","Autoidentificação dos alunos registrados.":"Self-identification of registered students.","Série Escolar":"School Grade","Alunos que têm":"Students with access to","Qtd":"Count","Quantidade":"Quantity"," famílias":" families"," alunos":" students","% de Risco":"Risk %","Risco":"Risk","Distância":"Distance","Apenas o administrador pode criar abas.":"Only the administrator can create tabs.","Erro crítico no processamento do arquivo.":"Critical error while processing the file.","Sem ano":"No year","Ano A":"Year A","Ano B":"Year B","Ano da pesquisa":"Database","Variação:":"Change:","Relatório de integridade — ":"Integrity report — ","Média de idade":"Average age","Ano da pesquisa":"Database"
+          },
+          es: {
+            "Processando Dados Espaciais e Estatísticos...":"Procesando datos espaciales y estadísticos...","Acesso Administrativo":"Acceso administrativo","Módulo de Edição, Estruturação e Upload de Base de Dados.":"Módulo de edición, estructuración y carga de bases de datos.","Usuário":"Usuario","Senha":"Contraseña","Desbloquear Sistema":"Desbloquear sistema","Voltar ao Modo Leitura":"Volver al modo de lectura","Plataforma Comunitária & Acadêmica":"Plataforma comunitaria y académica","Navegação Analítica":"Navegación analítica","Cartografia & Demografia":"Cartografía y demografía","Nutrição & Modais Completos":"Nutrición y modos de acceso","Nutrição & Indicadores":"Nutrición e indicadores","Casos Críticos (Triagem)":"Casos críticos (selección)","Casos Críticos":"Casos críticos","Comparar anos":"Comparar años","Documentos e Relatórios":"Documentos e informes","+ Adicionar Nova Aba":"+ Añadir nueva pestaña","Desenvolvido em parceria com":"Desarrollado en colaboración con","Status do Sistema:":"Estado del sistema:","● Aguardando Banco de Dados":"● Esperando datos","Painel de Edição Ativo":"Panel de edición activo","📁 Importar Questionário (.CSV)":"📁 Importar cuestionario (.CSV)","🖼️ Inserir Mídia/PDF na Aba":"🖼️ Insertar medios/PDF en la pestaña","Sair do Editor":"Salir del editor","Análise Comunitária Estruturada e Geoespacial":"Análisis comunitario estructurado y geoespacial","Mapeando o Futuro de":"Mapeando el futuro de","Painel interativo gerado a partir de dados de campo da Fizi School. Os gráficos abaixo cruzam automaticamente todos os perfis demográficos e educacionais disponíveis na base.":"Panel interactivo generado a partir de datos de campo de Fizi School. Los gráficos cruzan automáticamente los perfiles demográficos y educativos disponibles.","Ano da pesquisa":"Año de la encuesta","Todos os anos":"Todos los años","Exportar dados filtrados":"Exportar datos filtrados","Auditar dados":"Auditar datos","Amostragem":"Muestra","Crianças Pesquisadas":"Niños encuestados","Crianças pesquisadas":"Niños encuestados","Refugiados":"Refugiados","Impacto Migratório":"Impacto migratorio","Média Etária":"Edad promedio","Média de idade":"Edad promedio","Anos de Idade":"Años de edad","Distância Média":"Distancia promedio","Até a Fizi School (Km)":"Hasta Fizi School (km)","Deslocamento":"Desplazamiento","Acesso a Pé":"Acceso a pie","Risco Alimentar":"Inseguridad alimentaria","Nutrição Crítica":"Riesgo nutricional","Inteligência":"Inteligencia","Geoespacial Cartográfica":"Cartografía geoespacial","Utilize o controle no canto superior direito do mapa para alternar entre todas as camadas temáticas possíveis extraídas do banco de dados.":"Use el control en la esquina superior derecha del mapa para cambiar entre las capas temáticas de la base de datos.","Origem (Nacionalidade)":"Origen (nacionalidad)","Distribuição de locais de nascimento.":"Distribución de lugares de nacimiento.","Identidade Étnico-Racial":"Identidad étnico-racial","Autoidentificação dos alunos registrados.":"Autoidentificación de los estudiantes registrados.","Pirâmide de Gênero Global":"Pirámide de género general","Divisão sexual da amostragem total.":"Distribución por género de la muestra total.","Matrículas: Série Escolar x Gênero":"Matrículas: grado escolar × género","Volume de alunos por grau na Fizi com quebra demográfica.":"Número de estudiantes por grado en Fizi con desglose demográfico.","Distribuição por Faixa Etária":"Distribución por edad","Análise da pirâmide de idades para alocação de recursos pedagógicos.":"Análisis de edades para asignar recursos pedagógicos.","Classificação Familiar Estrutural":"Clasificación de estructura familiar","Agrupamento sociofamiliar baseado nas tipologias registradas pelo formulário.":"Agrupación sociofamiliar según las categorías registradas en el formulario.","Analytics, Nutrição & Logística Completa":"Análisis, nutrición y logística completa","Cruzamento":"Cruce","Socioeconômico Completo":"Análisis socioeconómico completo","Análise exaustiva da rotina dos alunos. Gráficos detalham exatamente QUAIS refeições faltam e cruzam modais de transporte com as distâncias geográficas calculadas.":"Análisis exhaustivo de la rutina de los estudiantes. Los gráficos detallan QUÉ comidas faltan y relacionan los medios de transporte con las distancias geográficas calculadas.","Disponibilidade Alimentar (Casa)":"Disponibilidad de alimentos (hogar)","Comparativo da % de crianças com acesso a CADA tipo de refeição.":"Comparación del porcentaje de niños con acceso a CADA tipo de comida.","Detalhamento Nutricional":"Detalle nutricional","Acesso individualizado a Café, Almoço e Jantar durante os períodos solicitados.":"Acceso individualizado al desayuno, almuerzo y cena durante los períodos solicitados.","Risco Nutricional por País de Origem":"Riesgo nutricional por país de origen","Fatia de cada grupo nacional que não atinge segurança alimentar básica.":"Proporción de cada grupo nacional que no alcanza la seguridad alimentaria básica.","Quebra Exata de Refeições Faltantes (Semana)":"Detalle de comidas faltantes (entre semana)","Quais refeições as crianças mais têm acesso de segunda a sexta?":"¿A qué comidas tienen más acceso los niños de lunes a viernes?","Quebra Exata de Refeições Faltantes (Fim de Semana)":"Detalle de comidas faltantes (fin de semana)","Quais refeições as crianças mais têm acesso sábado e domingo?":"¿A qué comidas tienen más acceso los niños los sábados y domingos?","Modal de Transporte Utilizado":"Medio de transporte utilizado","Como os alunos enfrentam o ambiente urbano para chegar à instituição.":"Cómo se desplazan los estudiantes por el entorno urbano para llegar a la institución.","A análise completa mostra a dependência total do caminhar (A Pé) ou do Transporte Público, indicando baixa motorização privada familiar na região mapeada.":"El análisis muestra dependencia de caminar o del transporte público, lo que indica un bajo uso de vehículos privados familiares en el área.","Distância Calculada (GIS) vs Modal":"Distancia calculada (SIG) frente al medio de transporte","Alerta:":"Alerta:","Triagem Prioritária":"Selección prioritaria","O algoritmo analisa a base de dados em tempo real e lista as famílias cujos questionários apontam extrema vulnerabilidade cumulativa.":"El algoritmo analiza la base en tiempo real y enumera las familias cuyos cuestionarios indican vulnerabilidad acumulada extrema.","Identificador":"Identificador","Família":"Familia","Origem":"Origen","Idade":"Edad","Refeições Casa (Semana)":"Comidas en casa (semana)","Banco de dados ausente ou em formatação incorreta.":"Base de datos ausente o con formato incorrecto.","Análise longitudinal":"Comparación de bases","Comparação entre":"Comparación entre","anos de pesquisa":"bases de datos","Compare indicadores calculados a partir das bases importadas. As variações mostram diferenças observadas entre os levantamentos, não comprovam por si só causalidade.":"Compare indicadores calculados a partir de las bases importadas. Las variaciones muestran diferencias observadas entre encuestas, pero no prueban causalidad por sí solas.","Base de dados A":"Base de datos A","Comparar com":"Comparar con","Atualizar comparação":"Actualizar comparación","Indicadores sociais (%)":"Indicadores sociales (%)","Perfil demográfico":"Perfil demográfico","Auditoria de integridade da exportação":"Auditoría de integridad de la exportación","A auditoria verifica contagem de registros, campos essenciais ausentes, UUID duplicado e coordenadas inválidas. Para comprovar equivalência com uma planilha exportada, compare o CSV de saída com o arquivo original e mantenha o arquivo-fonte preservado.":"La auditoría verifica el número de registros, campos esenciales ausentes, UUID duplicados y coordenadas inválidas. Para comprobar la equivalencia con una hoja exportada, compare el CSV con el archivo original y conserve la fuente.","Plataforma Tecnológica Desenvolvida por Universidade Federal da Bahia Engenharia & ComMap - Edu.":"Plataforma tecnológica desarrollada por Universidade Federal da Bahia Engenharia y ComMap-Edu.","© 2026 Friends of Fizi Kabiria. Arquitetura de Dados para Impacto Social e Cartografia.":"© 2026 Friends of Fizi Kabiria. Arquitectura de datos para el impacto social y la cartografía.","Acesso Negado.":"Acceso denegado.","Deseja sair do Modo Editor?":"¿Desea salir del modo editor?","Não há dados para exportar.":"No hay datos para exportar.","Apenas o administrador pode criar abas.":"Solo el administrador puede crear pestañas.","Nome da nova aba:":"Nombre de la nueva pestaña:","Selecione uma aba antes de inserir mídia.":"Seleccione una pestaña antes de insertar medios.","Área editorial. Use “Inserir Mídia/PDF” para anexar conteúdo durante esta sessão.":"Área editorial. Use “Insertar medios/PDF” para adjuntar contenido durante esta sesión.","Abrir PDF: ":"Abrir PDF: ","Protocolo Ativado.":"Protocolo activado.","Nenhum dado crítico.":"No hay datos críticos.","Café da Manhã":"Desayuno","Almoço":"Almuerzo","Jantar":"Cena","Padrão":"Estándar","Risco Severo":"Riesgo severo","A Pé":"A pie","Transporte Público":"Transporte público","O Tamanho do círculo reflete a idade da criança.":"El tamaño del círculo refleja la edad del niño.","Mapa Urbano Dark":"Mapa urbano oscuro","Google Satélite":"Satélite de Google","🗺️ Mapas Temáticos":"🗺️ Mapas temáticos","⚠️ Risco Alimentar":"⚠️ Inseguridad alimentaria","🚶 Modais de Acesso":"🚶 Modos de acceso","📊 Idade / Densidade":"📊 Edad / densidad","📚 Série Escolar":"📚 Grado escolar","🌍 Origem (Nacionalidade)":"🌍 Origen (nacionalidad)","🏠 Tipo de Família":"🏠 Tipo de familia","Sede Operacional":"Sede operativa","Relatório de integridade":"Informe de integridad","Esta checagem avalia a base carregada e a exportação produzida pelo site. Não valida respostas contra a fonte externa original; para isso, compare os arquivos e o total de linhas no software de origem.":"Esta comprobación evalúa la base cargada y la exportación del sitio. No valida las respuestas frente a la fuente externa original; compare los archivos y el número de filas en el software de origen.","Variação:":"Variación:"," registros":" registros"," anos":" años"," p.p.":" puntos porcentuales","Total de crianças":"Total de niños","Risco alimentar estimado":"Inseguridad alimentaria estimada","Acesso a pé":"Acceso a pie","Nascidos fora do Quênia*":"Nacidos fuera de Kenia*","Cruzamento da distância geodésica reta da casa até a Fizi School com o modal adotado.":"Cruce de la distancia geodésica en línea recta desde el hogar hasta Fizi School con el medio de transporte utilizado.","Série Escolar":"Grado escolar","Alunos que têm":"Estudiantes con acceso a","Qtd":"Cantidad","Quantidade":"Cantidad"," famílias":" familias"," alunos":" estudiantes","% de Risco":"% de riesgo","Risco":"Riesgo","Distância":"Distancia","Erro crítico no processamento do arquivo.":"Error crítico al procesar el archivo.","Sem ano":"Sin año","Ano B":"Año B","Relatório de integridade — ":"Informe de integridad — "
+          }
+        };
+        const translatedNodes = new WeakMap();
+        function translateValue(value, lang) {
+            if (lang === 'pt') return value;
+            const dict = translations[lang] || {};
+            if (Object.prototype.hasOwnProperty.call(dict, value)) return dict[value];
+            return value;
+        }
+        function changeLanguage(lang) {
+            currentLang = ['pt','en','es'].includes(lang) ? lang : 'pt';
+            document.documentElement.lang = currentLang === 'pt' ? 'pt-BR' : currentLang;
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+            const nodes = []; while (walker.nextNode()) nodes.push(walker.currentNode);
+            nodes.forEach(node => {
+                if (!translatedNodes.has(node)) translatedNodes.set(node, node.nodeValue);
+                const original = translatedNodes.get(node);
+                const trimmed = original.trim();
+                if (!trimmed) return;
+                const translated = translateValue(trimmed, currentLang);
+                if (translated !== trimmed) {
+                    const leading = original.match(/^\s*/)?.[0] || '';
+                    const trailing = original.match(/\s*$/)?.[0] || '';
+                    node.nodeValue = leading + translated + trailing;
+                } else if (currentLang === 'pt') node.nodeValue = original;
+            });
+            document.querySelectorAll('[placeholder]').forEach(el => {
+                if (!el.dataset.originalPlaceholder) el.dataset.originalPlaceholder = el.getAttribute('placeholder');
+                el.setAttribute('placeholder', translateValue(el.dataset.originalPlaceholder, currentLang));
+            });
+            document.querySelectorAll('[title]').forEach(el => {
+                if (!el.dataset.originalTitle) el.dataset.originalTitle = el.getAttribute('title');
+                el.setAttribute('title', translateValue(el.dataset.originalTitle, currentLang));
+            });
+            const languageSelect = document.getElementById('langSelect');
+            if (languageSelect) languageSelect.value = currentLang;
+            if (typeof chartInstances !== 'undefined') {
+                Object.values(chartInstances).forEach(chart => {
+                    if (!chart || !chart.data) return;
+                    if (chart.data.labels) {
+                        if (!chart.$originalLabels) chart.$originalLabels = chart.data.labels.map(label => String(label));
+                        chart.data.labels = chart.$originalLabels.map(label => translateValue(label, currentLang));
+                    }
+                    (chart.data.datasets || []).forEach(ds => {
+                        if (ds.label) {
+                            if (!ds.$originalLabel) ds.$originalLabel = ds.label;
+                            ds.label = translateValue(ds.$originalLabel, currentLang);
+                        }
+                    });
+                    chart.update('none');
+                });
+            }
+            const mapControl = document.querySelector('.custom-theme-control');
+            if (mapControl) {
+                const mapText = {pt:['🗺️ Mapas Temáticos','⚠️ Risco Alimentar','🚶 Modais de Acesso','📊 Idade / Densidade','📚 Série Escolar','🌍 Origem (Nacionalidade)','🏠 Tipo de Família'],en:['🗺️ Thematic Maps','⚠️ Food Insecurity','🚶 Access Modes','📊 Age / Density','📚 School Grade','🌍 Origin (Nationality)','🏠 Family Type'],es:['🗺️ Mapas temáticos','⚠️ Inseguridad alimentaria','🚶 Modos de acceso','📊 Edad / densidad','📚 Grado escolar','🌍 Origen (nacionalidad)','🏠 Tipo de familia']}[currentLang];
+                const select = mapControl.querySelector('select');
+                if (select) Array.from(select.options).forEach((option,i) => { if(mapText[i+1]) option.textContent = mapText[i+1]; });
+                const heading = mapControl.querySelector('div'); if (heading) heading.textContent = mapText[0];
+            }
+        }
+
+        if (window.Chart) {
+            Chart.defaults.color = '#d9e3e8';
+            Chart.defaults.borderColor = 'rgba(160,180,190,.18)';
+            Chart.defaults.font.family = "Outfit, sans-serif";
+        }
+
+        // Estados Globais
+        let isAdmin = false;
+        let chartInstances = {};
+        let globalLastDataCache = null;
+        let importedDatasets = [];
+        let selectedDataset = 'all';
+        const DB_STORE='datasets';
+        async function apiRequest(url, options={}) {
+          const response=await fetch(url,{credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})},...options});
+          const data=await response.json().catch(()=>({}));
+          if(!response.ok) throw new Error(data.error||'Falha na comunicação com o servidor ('+response.status+')');
+          return data;
+        }
+        async function saveDatasetLocal(ds){ await apiRequest('/api/datasets/'+encodeURIComponent(ds.name),{method:'PUT',body:JSON.stringify(ds)}); }
+        async function loadDatasetsLocal(){try{const result=await apiRequest('/api/datasets');const rows=result.datasets||[];if(rows.length){importedDatasets=rows;globalLastDataCache=getAllRows();refreshDatasetSelectors();processEngineeringData(globalLastDataCache);document.getElementById('db-status-indicator').innerText=`${globalLastDataCache.length} registros • ${importedDatasets.length} base(s) de dados`; } else {document.getElementById('db-status-indicator').innerText='● Banco online conectado — aguardando importação';}}catch(e){console.warn('Banco online indisponível',e);document.getElementById('db-status-indicator').innerText='● Erro ao conectar ao banco online';}}
+        window.addEventListener('DOMContentLoaded',()=>{loadDatasetsLocal();loadCmsContent();});
+        const THEME_COLORS = ['#E57C23', '#025464', '#E8AA42', '#A64B2A', '#4A7c59', '#6867ac', '#bf4f74', '#10b981', '#3b82f6', '#f59e0b'];
+        
+        let map;
+        let mapMarkers = [];
+        let schoolMarker = null;
+        let schoolRadius = null;
+        window.spatialFeatures = []; 
+        let currentMapTheme = 'nutricao';
+
+        changeLanguage('pt');
+
+        // Coordenadas Fixas da Fizi School
+        const FIZI_LAT = -1.29101945;
+        const FIZI_LNG = 36.72075857;
+
+        // Função Geodésica Haversine para Distâncias GIS
+        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+          var R = 6371; // Raio da Terra em km
+          var dLat = deg2rad(lat2-lat1);
+          var dLon = deg2rad(lon2-lon1);
+          var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2);
+          var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          return R * c; 
+        }
+        function deg2rad(deg) { return deg * (Math.PI/180); }
+
+        function initMap() {
+            if(!map) {
+                map = L.map('leaflet-map').setView([FIZI_LAT, FIZI_LNG], 16);
+
+                const googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                    maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '&copy; Google Satellite'
+                });
+                
+                const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    subdomains: ['a', 'b', 'c'],
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+                    crossOrigin: true
+                });
+
+                // OpenStreetMap clássico é a camada inicial; não depende do tileserver dark.
+                osmLayer.addTo(map);
+
+                const baseMaps = {
+                    "OpenStreetMap (urbano)": osmLayer,
+                    "Google Satélite": googleSat
+                };
+                L.control.layers(baseMaps, null, { position: 'topleft', collapsed: true }).addTo(map);
+                map.whenReady(function () { requestAnimationFrame(function () { map.invalidateSize(true); }); });
+
+                // CONTROLE CUSTOMIZADO: MAPA TEMÁTICO
+                var ThemeControl = L.Control.extend({
+                    options: { position: 'topright' },
+                    onAdd: function (map) {
+                        var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control custom-theme-control');
+                        container.innerHTML = `
+                            <div style="font-size: 12px; font-weight: 800; color: var(--color-primary); margin-bottom: 8px; text-transform: uppercase;">🗺️ Mapas Temáticos</div>
+                            <select onchange="changeMapTheme(this.value)">
+                                <option value="nutricao">⚠️ Risco Alimentar</option>
+                                <option value="transporte">🚶 Modais de Acesso</option>
+                                <option value="idade">📊 Idade / Densidade</option>
+                                <option value="serie">📚 Série Escolar</option>
+                                <option value="origem">🌍 Origem (Nacionalidade)</option>
+                                <option value="familia">🏠 Tipo de Família</option>
+                            </select>
+                        `;
+                        L.DomEvent.disableClickPropagation(container);
+                        return container;
+                    }
+                });
+                map.addControl(new ThemeControl());
+
+                const schoolIcon = L.divIcon({
+                    className: 'fizi-school-marker',
+                    html: `<div style="background-color: var(--color-primary); width: 24px; height: 24px; border-radius: 50%; border: 3px solid #FFF; box-shadow: 0 0 12px rgba(0,0,0,0.6); animation: pulse 2s infinite;"></div>`,
+                    iconSize: [24, 24], iconAnchor: [12, 12]
+                });
+
+                schoolMarker = L.marker([FIZI_LAT, FIZI_LNG], { icon: schoolIcon }).addTo(map);
+                schoolMarker.bindPopup(`<div style="color: #130E0A; font-family: 'Outfit'; p-1"><b style="color: var(--color-secondary); font-size: 14px;">Fizi School</b><p style="margin:0; font-size:11px; font-weight:800;">Sede Operacional</p></div>`).openPopup();
+
+                schoolRadius = L.circle([FIZI_LAT, FIZI_LNG], { color: 'var(--color-accent)', fillColor: 'var(--color-primary)', fillOpacity: 0.15, weight: 2, radius: 150 }).addTo(map);
+            }
+        }
+
+        // Funções UI Básicas
+        function openLogin() { document.getElementById('loginModal').style.display = 'flex'; }
+        function closeLogin() { document.getElementById('loginModal').style.display = 'none'; }
+        async function authenticate() {
+            const user=document.getElementById('adminUser').value, password=document.getElementById('adminPass').value;
+            try { await apiRequest('/api/login',{method:'POST',body:JSON.stringify({username:user,password})});
+              isAdmin=true; document.getElementById('app-body').classList.add('edit-mode'); toggleEditableElements(true); closeLogin();
+              alert('Acesso administrativo autorizado.');
+            } catch(e) { alert('Acesso negado: '+e.message); }
+        }
+        function exitAdmin() {
+            if(confirm("Deseja sair do Modo Editor?")) {
+                isAdmin = false; document.getElementById('app-body').classList.remove('edit-mode'); toggleEditableElements(false); apiRequest('/api/logout',{method:'POST',body:JSON.stringify({})}).catch(()=>{});
+            }
+        }
+        function toggleEditableElements(isEditable) {
+            document.querySelectorAll('.editable').forEach(el => el.setAttribute('contenteditable', isEditable));
+        }
+        function openFiziSite(navElement) {
+            switchTab('tab-fizi-site', navElement);
+            const frame = document.getElementById('fiziSiteFrame');
+            if (frame && !frame.dataset.loaded) { frame.src = 'https://fizischool.com/'; frame.dataset.loaded = 'true'; }
+        }
+        function toggleMobileNav() {
+            if (document.body.classList.contains('mobile-nav-open')) closeMobileNav();
+            else openMobileNav();
+        }
+        function openMobileNav() {
+            document.body.classList.add('mobile-nav-open');
+            const button = document.getElementById('mobileMenuButton');
+            if (button) { button.setAttribute('aria-expanded','true'); button.setAttribute('aria-label','Fechar menu'); }
+        }
+        function closeMobileNav() {
+            document.body.classList.remove('mobile-nav-open');
+            const button = document.getElementById('mobileMenuButton');
+            if (button) { button.setAttribute('aria-expanded','false'); button.setAttribute('aria-label','Abrir menu'); }
+        }
+        document.addEventListener('keydown', function(event) { if (event.key === 'Escape') closeMobileNav(); });
+        function updateMobileSection(label) {
+            const target = document.getElementById('mobileCurrentSection');
+            if (target && label) target.textContent = label.trim();
+        }
+
+        function switchTab(targetId, navElement) {
+            document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
+            document.querySelectorAll('.sidebar-link').forEach(link => link.classList.remove('active'));
+            document.getElementById(targetId).classList.add('active');
+            if (navElement) navElement.classList.add('active');
+            if (navElement) updateMobileSection(navElement.innerText.replace(/\s+/g, ' ').replace(/[🗺️🍲⚠️📈🌍📄]/g, '').trim());
+            closeMobileNav();
+            if(targetId === 'tab-dashboard' && map) setTimeout(() => map.invalidateSize(), 220);
+        }
+
+        // ENGINE DE ENGENHARIA DE DADOS (PARSER COMPLETO CSV/XLSX)
+        document.getElementById('excelFile').addEventListener('change', function(e) {
+            const file=e.target.files[0]; if(!file)return;
+            document.getElementById('loader').style.display='flex';
+            document.getElementById('db-status-indicator').innerText='Processando: '+file.name;
+            const reader=new FileReader();
+            reader.onload=async function(evt){try{
+                const workbook=XLSX.read(new Uint8Array(evt.target.result),{type:'array'});
+                const rawJson=XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]],{defval:''});
+                const existingIndex=importedDatasets.findIndex(ds=>ds.name===file.name);
+                if(existingIndex>=0&&!confirm(`A base “${file.name}” já existe. Deseja substituir somente essa base?`)){document.getElementById('loader').style.display='none';e.target.value='';return;}
+                const dataset={name:file.name,rows:rawJson.map(r=>({...r})),importedAt:new Date().toISOString()};
+                if(existingIndex>=0)importedDatasets[existingIndex]=dataset;else importedDatasets.push(dataset);
+                await saveDatasetLocal(dataset); selectedDataset=file.name;
+                globalLastDataCache=getAllRows();refreshDatasetSelectors();
+                document.getElementById('datasetFilter').value=selectedDataset;
+                processEngineeringData(getVisibleRows());
+                document.getElementById('db-status-indicator').innerText=`${globalLastDataCache.length} registros • ${importedDatasets.length} base(s) de dados`;
+                document.getElementById('db-status-indicator').className='text-[var(--color-success)] font-bold';
+            }catch(error){alert('Erro ao importar a base de dados. Confira o formato do arquivo.');console.error(error);}finally{document.getElementById('loader').style.display='none';e.target.value='';}};
+            reader.readAsArrayBuffer(file);
+        });
+        function getAllRows(){return importedDatasets.flatMap(ds=>ds.rows.map(row=>({...row,__sourceFile:ds.name})));}
+        function getVisibleRows(){const chosen=document.getElementById('datasetFilter')?.value||'all';return chosen==='all'?getAllRows():getAllRows().filter(r=>r.__sourceFile===chosen);}
+        function refreshDatasetSelectors(){
+            const names=importedDatasets.map(ds=>ds.name);
+            const filter=document.getElementById('datasetFilter');
+            if(filter){const old=selectedDataset||filter.value;filter.innerHTML='<option value="all">Todas as bases de dados</option>'+names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');filter.value=names.includes(old)?old:'all';selectedDataset=filter.value;}
+            ['compareYearA','compareYearB'].forEach(id=>{const el=document.getElementById(id);if(!el)return;const old=el.value;el.innerHTML=names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');if(names.includes(old))el.value=old;});
+            if(names.length>1){if(!names.includes(document.getElementById('compareYearA').value))document.getElementById('compareYearA').value=names[0];if(!names.includes(document.getElementById('compareYearB').value)||document.getElementById('compareYearB').value===document.getElementById('compareYearA').value)document.getElementById('compareYearB').value=names.find(n=>n!==document.getElementById('compareYearA').value)||names[1];}
+            else if(names.length===1){document.getElementById('compareYearA').value=names[0];document.getElementById('compareYearB').value=names[0];}
+        }
+        function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+        function applyDatasetFilter(){selectedDataset=document.getElementById('datasetFilter').value;processEngineeringData(getVisibleRows());}
+        async function deleteSelectedDataset(){
+            if(!isAdmin){alert('Apenas o administrador pode excluir planilhas.');return;}
+            const filter=document.getElementById('datasetFilter');
+            const name=filter?.value||'all';
+            if(name==='all'){alert('Selecione uma planilha específica no filtro “Base de dados” antes de excluir.');return;}
+            if(!importedDatasets.some(ds=>ds.name===name)){alert('A planilha selecionada não foi encontrada.');return;}
+            if(!confirm(`Tem certeza de que deseja excluir permanentemente a planilha “${name}” e todos os seus registros? Esta ação não pode ser desfeita.`))return;
+            try{
+                await apiRequest('/api/datasets/'+encodeURIComponent(name),{method:'DELETE'});
+                importedDatasets=importedDatasets.filter(ds=>ds.name!==name);
+                selectedDataset='all';
+                refreshDatasetSelectors();
+                const filterAfter=document.getElementById('datasetFilter');
+                if(filterAfter)filterAfter.value='all';
+                globalLastDataCache=getAllRows();
+                processEngineeringData(getVisibleRows());
+                const status=document.getElementById('db-status-indicator');
+                if(status)status.innerText=importedDatasets.length?`${globalLastDataCache.length} registros • ${importedDatasets.length} base(s) de dados`:'● Banco online conectado — aguardando importação';
+                alert(`A planilha “${name}” foi excluída com sucesso.`);
+            }catch(error){
+                console.error('Erro ao excluir planilha:',error);
+                alert('Não foi possível excluir a planilha. Verifique se você continua conectado como administrador e tente novamente.');
+            }
+        }
+        function processEngineeringData(data){globalLastDataCache=data;processEngineeringDataLegacy(data);renderYearComparison();}
+        function exportFilteredData(){
+            const rows=getVisibleRows();if(!rows.length){alert('Não há dados para exportar.');return;}
+            const chosen=document.getElementById('datasetFilter').value;
+            const headers=[...new Set(rows.flatMap(r=>Object.keys(r).filter(k=>k!=='__sourceFile')))];
+            const esc=v=>{const s=String(v??'');return /[;"\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+            const csv='\ufeff'+[headers.map(esc).join(';'),...rows.map(r=>headers.map(h=>esc(r[h])).join(';'))].join('\r\n');
+            const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');const url=URL.createObjectURL(blob);
+            a.href=url;a.download=`fizi-school-${chosen==='all'?'todas-as-bases':chosen.replace(/[^a-z0-9_-]/gi,'_')}-export.csv`;a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);runDataAudit();
+        }
+        function runDataAudit(){
+            const rows=getVisibleRows();
+            const keys=Object.keys(rows[0]||{});
+            const uuidKey=keys.find(k=>/uuid/i.test(k));
+            const missingName=rows.filter(r=>!String(r['What is the name of the child you are responsible for?']||'').trim()).length;
+            const missingDate=rows.filter(r=>!String(r.start||r.end||'').trim()).length;
+            const invalidCoords=rows.filter(r=>{
+                const latRaw=String(r.Lat??'').trim(), lngRaw=String(r.Long??'').trim();
+                if(!latRaw && !lngRaw) return false;
+                if(!latRaw || !lngRaw) return true;
+                const lat=Number(latRaw),lng=Number(lngRaw);
+                return !Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180;
+            }).length;
+            const ids=uuidKey?rows.map(r=>String(r[uuidKey]||'').trim()).filter(Boolean):[];
+            const duplicates=ids.length-new Set(ids).size;
+            const report={registros:rows.length,colunas:keys.filter(k=>k!=='__sourceFile').length,nome_ausente:missingName,data_ausente:missingDate,coordenadas_invalidas:invalidCoords,identificadores_duplicados:duplicates,arquivo_fonte:importedDatasets.map(d=>d.name).join(', ')||'Nenhum'};
+            const target=document.getElementById('auditOutput');
+            const cls=(missingName+missingDate+invalidCoords+duplicates)>0?'audit-result audit-warn':'audit-result';
+            const items=Object.entries(report).map(([k,v])=>`<div><b>${escapeHtml(k.replaceAll('_',' '))}:</b> ${escapeHtml(v)}</div>`).join('');
+            target.innerHTML=`<div class="${cls}"><b>Relatório de integridade — ${new Date().toLocaleString()}</b><div class="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">${items}</div><p class="mt-3 text-xs">Esta checagem avalia a base carregada e a exportação produzida pelo site. Não valida respostas contra a fonte externa original; para isso, compare os arquivos e o total de linhas no software de origem.</p></div>`;
+            const second=document.getElementById('compareAuditOutput');if(second)second.innerHTML=target.innerHTML;
+            return report;
+        }
+        function summarizeYear(rows){
+            const total=rows.length||0;
+            let ages=[],critical=0,walk=0,refugees=0,knownOrigin=0;
+            rows.forEach(r=>{
+                const age=parseFloat(r['How old is the child?']);if(Number.isFinite(age))ages.push(age);
+                const origin=String(r['Where the kid was born?']||'').trim().toLowerCase();
+                if(origin&&origin!=='n/i'&&origin!=='kenya')refugees++;
+                if(origin&&origin!=='n/i')knownOrigin++;
+                if(parseInt(r['How the child get to the Fizi School?/By foot'])===1)walk++;
+                const mealKeys=Object.keys(r).filter(k=>k.includes('at home during the week')&&/Breakfast|Lunch|Dinner/i.test(k));
+                const meals=mealKeys.reduce((s,k)=>s+(parseInt(r[k])||0),0);
+                if(mealKeys.length&&meals<=1)critical++;
+            });
+            return {total,meanAge:ages.length?ages.reduce((a,b)=>a+b,0)/ages.length:null,criticalRate:total?critical/total*100:0,walkRate:total?walk/total*100:0,refugeeRate:knownOrigin?refugees/knownOrigin*100:0};
+        }
+        function renderYearComparison(){
+            if(!importedDatasets.length)return;
+            const nameA=document.getElementById('compareYearA').value,nameB=document.getElementById('compareYearB').value;
+            const a=summarizeYear((importedDatasets.find(d=>d.name===nameA)||{rows:[]}).rows),b=summarizeYear((importedDatasets.find(d=>d.name===nameB)||{rows:[]}).rows);
+            const metrics=[['Registros',a.total,b.total,'n'],['Média de idade',a.meanAge,b.meanAge,'anos'],['Risco alimentar estimado',a.criticalRate,b.criticalRate,'%'],['Acesso a pé',a.walkRate,b.walkRate,'%'],['Nascidos fora do Quênia*',a.refugeeRate,b.refugeeRate,'%']];
+            document.getElementById('comparisonSummary').innerHTML=metrics.map(([label,av,bv,unit])=>{const delta=av==null||bv==null?null:bv-av;const fmt=v=>v==null?'—':(unit==='n'?Math.round(v):v.toFixed(1))+(unit==='%'?'%':unit==='anos'?' anos':'');return `<div class="glass p-5"><p class="text-xs font-bold uppercase tracking-wide">${label}</p><div class="text-2xl font-black mt-2">${fmt(av)} <span class="text-sm">→</span> ${fmt(bv)}</div><p class="text-sm mt-2">Variação: ${delta===null?'—':(delta>0?'+':'')+delta.toFixed(1)+(unit==='%'?' p.p.':unit==='anos'?' anos':' registros')}</p></div>`;}).join('');
+            const findings=[];
+            if(nameA===nameB||!a.total||!b.total) findings.push({kind:'neutral',title:'Selecione duas bases diferentes',text:'Para uma comparação útil, escolha duas bases de dados diferentes com registros válidos.'});
+            else {const dt=b.total-a.total,da=a.meanAge==null||b.meanAge==null?null:b.meanAge-a.meanAge,df=b.criticalRate-a.criticalRate,dw=b.walkRate-a.walkRate,dr=b.refugeeRate-a.refugeeRate;
+                findings.push({kind:dt>0?'up':dt<0?'down':'neutral',title:dt>0?'A base B tem mais registros':dt<0?'A base B tem menos registros':'As bases têm o mesmo número de registros',text:`A base “${nameA}” contém ${a.total} registros e “${nameB}” contém ${b.total}; diferença de ${dt>0?'+':''}${dt} registros.`});
+                if(da!==null)findings.push({kind:da>0?'up':da<0?'down':'neutral',title:da>0?'A média de idade é maior na base B':da<0?'A média de idade é menor na base B':'A média de idade é igual',text:`A média passou de ${a.meanAge.toFixed(1)} para ${b.meanAge.toFixed(1)} anos (${da>0?'+':''}${da.toFixed(1)}).`});
+                findings.push({kind:df<0?'good':df>0?'bad':'neutral',title:df<0?'Risco alimentar estimado menor na base B':df>0?'Risco alimentar estimado maior na base B':'Risco alimentar estimado igual',text:`O indicador passou de ${a.criticalRate.toFixed(1)}% para ${b.criticalRate.toFixed(1)}% (${df>0?'+':''}${df.toFixed(1)} p.p.).`});
+                findings.push({kind:'neutral',title:'Interpretação',text:`A comparação é descritiva entre “${nameA}” e “${nameB}”. Diferenças no preenchimento e na composição das bases podem influenciar os resultados; não comprovam causalidade.`});}
+            const colors={good:'#16a34a',bad:'#ef4444',up:'#f59e0b',down:'#60a5fa',neutral:'#94a3b8'};const icons={good:'↓',bad:'↑',up:'↑',down:'↓',neutral:'•'};
+            document.getElementById('comparisonFindings').innerHTML=`<h3 class="text-lg font-black mb-1">Diferenças entre ${escapeHtml(nameA)} e ${escapeHtml(nameB)}</h3><p class="text-sm text-gray-400 mb-4">Leitura descritiva dos indicadores disponíveis nas duas bases selecionadas.</p><div class="grid grid-cols-1 lg:grid-cols-2 gap-3">${findings.map(f=>`<article style="border:1px solid ${colors[f.kind]}55;border-left:4px solid ${colors[f.kind]};border-radius:10px;padding:14px;background:rgba(255,255,255,.025)"><h4 style="font-weight:800;margin-bottom:5px;color:${colors[f.kind]}">${icons[f.kind]} ${escapeHtml(f.title)}</h4><p class="text-sm">${escapeHtml(f.text)}</p></article>`).join('')}</div>`;
+            const rates=document.getElementById('chart-year-rates');if(rates){if(chartInstances['chart-year-rates'])chartInstances['chart-year-rates'].destroy();chartInstances['chart-year-rates']=new Chart(rates.getContext('2d'),{type:'bar',data:{labels:['Risco alimentar estimado','Acesso a pé','Nascidos fora do Quênia*'],datasets:[{label:nameA,data:[a.criticalRate,a.walkRate,a.refugeeRate],backgroundColor:'#176b5b'},{label:nameB,data:[b.criticalRate,b.walkRate,b.refugeeRate],backgroundColor:'#e87524'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%'}}}}});}
+            const ctx=document.getElementById('chart-year-demography');if(ctx){if(chartInstances['chart-year-demography'])chartInstances['chart-year-demography'].destroy();chartInstances['chart-year-demography']=new Chart(ctx,{type:'bar',data:{labels:['Total de crianças','Média de idade'],datasets:[{label:nameA,data:[a.total,a.meanAge||0],backgroundColor:'#176b5b'},{label:nameB,data:[b.total,b.meanAge||0],backgroundColor:'#e9b949'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:true}}}});}
+        }
+        function createNewTabPrompt(){
+            if(!isAdmin)return alert('Apenas o administrador pode criar abas.');
+            const name=prompt('Nome da nova aba:');if(!name)return;
+            const id='custom-'+Date.now();
+            const nav=document.createElement('div');nav.className='sidebar-link';nav.innerHTML=`<span>📄</span><span>${escapeHtml(name)}</span>`;nav.onclick=()=>switchTab(id,nav);document.getElementById('nav-menu-custom').appendChild(nav);
+            const sec=document.createElement('section');sec.id=id;sec.className='page-section';sec.innerHTML=`<div class="glass p-8"><h2 class="text-3xl font-black mb-4">${escapeHtml(name)}</h2><p>Área editorial. Use “Inserir Mídia/PDF” para anexar conteúdo durante esta sessão.</p><div id="${id}-media"></div></div>`;document.getElementById('pages-container').appendChild(sec);
+        }
+        function handleMediaUpload(event){
+            const file=event.target.files&&event.target.files[0];if(!file)return;
+            const active=document.querySelector('.page-section.active');
+            if(!active){alert('Selecione uma aba antes de inserir mídia.');return;}
+            const target=active.querySelector('[id$="-media"]')||active;
+            if(file.type.startsWith('image/')){const img=document.createElement('img');img.src=URL.createObjectURL(file);img.alt=file.name;img.style.maxWidth='100%';img.style.borderRadius='12px';target.appendChild(img);}
+            else {const link=document.createElement('a');link.href=URL.createObjectURL(file);link.target='_blank';link.rel='noopener';link.textContent='Abrir PDF: '+file.name;link.className='btn btn-outline';target.appendChild(link);}
+        }
+        function processEngineeringDataLegacy(data) {
+            if(!data || data.length === 0) return;
+
+            let totalRecords = data.length;
+            let sumAge = 0, countAge = 0, countRefugees = 0, countFoodCritical = 0;
+            let sumDistance = 0, countDistance = 0;
+
+            // Variáveis de Gráficos e Lógicas
+            let objOrigin = {}, objGender = {}, objGrade = {}, objFamilyClass = {}, objIdentity = {};
+            let objAgeDist = { "1-3":0, "4-6": 0, "7-9": 0, "10-12": 0, "13+": 0 };
+            let objTransport = {'A Pé': 0, 'Transporte Público': 0, 'Carro': 0, 'Outro': 0};
+            let objGradeGender = {}; 
+            let distVsModal = {'A Pé': {sum:0, count:0}, 'Transporte Público': {sum:0, count:0}};
+            
+            let foodStats = { week: { b: 0, l: 0, d: 0 }, weekend: { b: 0, l: 0, d: 0 } };
+            let originRisk = {};
+
+            window.spatialFeatures = []; 
+            let criticalRowsHtml = '';
+
+            data.forEach(row => {
+                const ageRaw = parseInt(row['How old is the child?']);
+                const gender = row["What is the child's gender?"] ? row["What is the child's gender?"].trim() : "N/I";
+                const origin = row["Where the kid was born?"] ? row["Where the kid was born?"].trim() : "N/I";
+                const identity = row["How does the child identify themselves?"] ? row["How does the child identify themselves?"].trim() : "N/I";
+                const grade = row["What grade the kid is in?"] ? row["What grade the kid is in?"].trim() : "N/I";
+                const familyType = row['Familia Classificação'] ? row['Familia Classificação'].trim() : "Geral";
+                const lat = parseFloat(row['Lat']);
+                const lng = parseFloat(row['Long']);
+
+                // Idades
+                if(!isNaN(ageRaw)) {
+                    sumAge += ageRaw; countAge++;
+                    if(ageRaw <= 3) objAgeDist["1-3"]++;
+                    else if(ageRaw <= 6) objAgeDist["4-6"]++;
+                    else if(ageRaw <= 9) objAgeDist["7-9"]++;
+                    else if(ageRaw <= 12) objAgeDist["10-12"]++;
+                    else objAgeDist["13+"]++;
+                }
+
+                // Contagens simples
+                objGender[gender] = (objGender[gender] || 0) + 1;
+                objIdentity[identity] = (objIdentity[identity] || 0) + 1;
+                objGrade[grade] = (objGrade[grade] || 0) + 1;
+                objOrigin[origin] = (objOrigin[origin] || 0) + 1;
+                objFamilyClass[familyType] = (objFamilyClass[familyType] || 0) + 1;
+
+                if(!objGradeGender[grade]) objGradeGender[grade] = { 'Female':0, 'Male':0, 'Other':0 };
+                if(objGradeGender[grade][gender] !== undefined) objGradeGender[grade][gender]++;
+                else objGradeGender[grade]['Other']++;
+
+                if(origin.toLowerCase() !== 'kenya' && origin !== 'N/I') countRefugees++;
+
+                // Modais
+                let transportMode = 'Outro';
+                if(parseInt(row['How the child get to the Fizi School?/By foot']) === 1) { objTransport['A Pé']++; transportMode = 'A Pé'; }
+                else if(parseInt(row['How the child get to the Fizi School?/Public transportation']) === 1) { objTransport['Transporte Público']++; transportMode = 'Transporte Público'; }
+                else if(parseInt(row['How the child get to the Fizi School?/By a Car']) === 1) { objTransport['Carro']++; transportMode = 'Carro'; }
+                else { objTransport['Outro']++; }
+
+                // Distância (GIS)
+                let distKm = 0;
+                if(!isNaN(lat) && !isNaN(lng)) {
+                    distKm = getDistanceFromLatLonInKm(lat, lng, FIZI_LAT, FIZI_LNG);
+                    sumDistance += distKm; countDistance++;
+                    if(distVsModal[transportMode]) {
+                        distVsModal[transportMode].sum += distKm;
+                        distVsModal[transportMode].count++;
+                    }
+                }
+
+                // Refeições Extensivas
+                let wkB = parseInt(row['Which meals do you kid has access during the weekend/Breakfast']) || 0;
+                let wkL = parseInt(row['Which meals do you kid has access during the weekend/Lunch']) || 0;
+                let wkD = parseInt(row['Which meals do you kid has access during the weekend/Dinner ']) || parseInt(row['Which meals do you kid has access during the weekend/Dinner']) || 0;
+                foodStats.weekend.b += wkB; foodStats.weekend.l += wkL; foodStats.weekend.d += wkD;
+
+                let dkB = parseInt(row['Which meals do you kid has access at home during the week ( monday to friday) /Breakfast']) || 0;
+                let dkL = parseInt(row['Which meals do you kid has access at home during the week ( monday to friday) /Lunch']) || 0;
+                let dkD = parseInt(row['Which meals do you kid has access at home during the week ( monday to friday) /Dinner']) || parseInt(row['Which meals do you kid has access at home during the week ( monday to friday) /Dinner ']) || 0;
+                foodStats.week.b += dkB; foodStats.week.l += dkL; foodStats.week.d += dkD;
+
+                let mealsAtHome = dkB + dkL + dkD;
+                let isCritical = mealsAtHome <= 1;
+                if(isCritical) countFoodCritical++;
+
+                if(!originRisk[origin]) originRisk[origin] = { total: 0, critical: 0 };
+                originRisk[origin].total++;
+                if(isCritical) originRisk[origin].critical++;
+
+                if(isCritical) {
+                    criticalRowsHtml += `
+                        <tr class="hover:bg-red-900/30 transition border-b border-white/5">
+                            <td class="p-4 font-bold text-[var(--color-primary)]">${row['What is the name of the child you are responsible for?'] || 'N/A'}</td>
+                            <td class="p-4">${familyType}</td>
+                            <td class="p-4"><span class="badge ${origin.toLowerCase() !== 'kenya' ? 'badge-primary' : 'bg-gray-700 text-gray-300'}">${origin}</span></td>
+                            <td class="p-4">${!isNaN(ageRaw) ? ageRaw : 'N/I'}</td>
+                            <td class="p-4 text-center font-black text-red-500">${mealsAtHome} / 3</td>
+                            <td class="p-4 text-center"><button class="bg-red-800 text-white px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider" onclick="alert('Protocolo Ativado.')">Triar</button></td>
+                        </tr>`;
+                }
+
+                // Construção de Vetores para Mapa
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    window.spatialFeatures.push({
+                        lat, lng, name: row['What is the name of the child you are responsible for?'] || 'Estudante',
+                        origin, isCritical, mealsAtHome, transportMode, ageRaw, grade, familyType
+                    });
+                }
+            });
+
+            document.getElementById('critical-table-body').innerHTML = criticalRowsHtml || `<tr><td colspan="6" class="p-8 text-center text-[var(--color-success)] font-bold">Nenhum dado crítico.</td></tr>`;
+
+            // Atualiza KPIs
+            document.getElementById('kpi-total').innerText = totalRecords;
+            document.getElementById('kpi-refugees').innerText = `${((countRefugees/totalRecords)*100).toFixed(0)}%`;
+            document.getElementById('kpi-age').innerText = countAge > 0 ? (sumAge / countAge).toFixed(1) : '-';
+            document.getElementById('kpi-distance').innerText = countDistance > 0 ? (sumDistance / countDistance).toFixed(2) : '-';
+            document.getElementById('kpi-walk').innerText = `${((objTransport['A Pé']/totalRecords)*100).toFixed(0)}%`;
+            document.getElementById('kpi-food-danger').innerText = `${((countFoodCritical/totalRecords)*100).toFixed(0)}%`;
+
+            // ================= Renderização de TODOS OS Gráficos ================= //
+            let perc = (v) => ((v/totalRecords)*100).toFixed(1);
+
+            renderChartJS('chart-origin', 'pie', Object.keys(objOrigin), Object.values(objOrigin), false, 'Qtd', ' alunos');
+            renderChartJS('chart-identity', 'doughnut', Object.keys(objIdentity), Object.values(objIdentity), false, 'Qtd', ' alunos');
+            renderChartJS('chart-gender', 'doughnut', Object.keys(objGender), Object.values(objGender), false, 'Qtd', ' alunos');
+            renderChartJS('chart-age-dist', 'bar', Object.keys(objAgeDist), Object.values(objAgeDist), false, 'Qtd', ' alunos', '#E8AA42');
+            renderChartJS('chart-family-class', 'bar', Object.keys(objFamilyClass), Object.values(objFamilyClass), true, 'Qtd', ' famílias', '#025464');
+            renderChartJS('chart-transport', 'polarArea', Object.keys(objTransport), Object.values(objTransport), false, 'Qtd', ' alunos');
+
+            // Gráfico Duplo Básico: Disponibilidade Geral Casa
+            renderDualBarChart('chart-food', ['Café da Manhã', 'Almoço', 'Jantar'], 
+                [perc(foodStats.week.b), perc(foodStats.week.l), perc(foodStats.week.d)], 'Dias de Semana (Acesso)',
+                [perc(foodStats.weekend.b), perc(foodStats.weekend.l), perc(foodStats.weekend.d)], 'Fins de Semana (Acesso)');
+
+            // Risco por País
+            let originRiskLabels = Object.keys(originRisk);
+            let originRiskData = originRiskLabels.map(k => ((originRisk[k].critical / originRisk[k].total) * 100).toFixed(1));
+            renderChartJS('chart-food-origin', 'bar', originRiskLabels, originRiskData, true, 'Risco', '% de Risco', '#ef4444');
+
+            // NOVOS: Gráficos Detalhados
+            // Quebra Específica Semana
+            renderChartJS('chart-meal-detail-week', 'bar', ['Café da Manhã', 'Almoço', 'Jantar'], [foodStats.week.b, foodStats.week.l, foodStats.week.d], false, 'Alunos que têm', '', '#4A7c59');
+            // Quebra Específica Fim de Semana
+            renderChartJS('chart-meal-detail-weekend', 'bar', ['Café da Manhã', 'Almoço', 'Jantar'], [foodStats.weekend.b, foodStats.weekend.l, foodStats.weekend.d], false, 'Alunos que têm', '', '#A64B2A');
+
+            // Stacked Bar: Matrículas por Série e Gênero
+            let gradesList = Object.keys(objGradeGender).sort();
+            let femaleData = gradesList.map(g => objGradeGender[g]['Female'] || 0);
+            let maleData = gradesList.map(g => objGradeGender[g]['Male'] || 0);
+            renderStackedBar('chart-grade-gender', gradesList, femaleData, 'Meninas', maleData, 'Meninos');
+
+            // Gráfico: Distância Média por Modal
+            let distModalLabels = ['A Pé', 'Transporte Público'];
+            let distModalData = distModalLabels.map(m => distVsModal[m].count > 0 ? (distVsModal[m].sum / distVsModal[m].count).toFixed(2) : 0);
+            renderChartJS('chart-distance-modal', 'bar', distModalLabels, distModalData, false, 'Distância', ' km', '#3b82f6');
+
+
+            // Plota o mapa e ajusta limites
+            changeMapTheme('nutricao');
+            if(mapMarkers.length > 0) {
+                let group = new L.featureGroup(mapMarkers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+
+        // Função Master de Mapas Temáticos Interativos e Legendas
+        function changeMapTheme(theme) {
+            currentMapTheme = theme;
+            
+            mapMarkers.forEach(m => map.removeLayer(m));
+            mapMarkers = [];
+
+            // Helper cores por indice
+            function getColorByIndex(index) { return THEME_COLORS[index % THEME_COLORS.length]; }
+
+            let uniqueGrades = [...new Set(window.spatialFeatures.map(f => f.grade))];
+            let uniqueOrigins = [...new Set(window.spatialFeatures.map(f => f.origin))];
+            let uniqueFamilies = [...new Set(window.spatialFeatures.map(f => f.familyType))];
+
+            window.spatialFeatures.forEach(feat => {
+                let fillColor, radius, popupExtra;
+
+                if(theme === 'nutricao') {
+                    fillColor = feat.isCritical ? '#ef4444' : '#E57C23';
+                    radius = feat.isCritical ? 9 : 6;
+                    popupExtra = `<b>Segurança Alimentar:</b> ${feat.mealsAtHome}/3 refeições`;
+                } 
+                else if (theme === 'transporte') {
+                    fillColor = feat.transportMode === 'A Pé' ? '#EBB02D' : (feat.transportMode === 'Transporte Público' ? '#025464' : '#a1a1aa');
+                    radius = 7;
+                    popupExtra = `<b>Modal Logístico:</b> ${feat.transportMode}`;
+                }
+                else if (theme === 'idade') {
+                    fillColor = '#10b981';
+                    radius = isNaN(feat.ageRaw) ? 5 : Math.max(4, (feat.ageRaw / 2) * 1.5);
+                    popupExtra = `<b>Idade Mapeada:</b> ${isNaN(feat.ageRaw) ? 'N/I' : feat.ageRaw + ' anos'}`;
+                }
+                else if (theme === 'serie') {
+                    fillColor = getColorByIndex(uniqueGrades.indexOf(feat.grade));
+                    radius = 7;
+                    popupExtra = `<b>Série Escolar:</b> ${feat.grade}`;
+                }
+                else if (theme === 'origem') {
+                    fillColor = getColorByIndex(uniqueOrigins.indexOf(feat.origin));
+                    radius = 7;
+                    popupExtra = `<b>País de Origem:</b> ${feat.origin}`;
+                }
+                else if (theme === 'familia') {
+                    fillColor = getColorByIndex(uniqueFamilies.indexOf(feat.familyType));
+                    radius = 7;
+                    popupExtra = `<b>Classificação Família:</b> ${feat.familyType}`;
+                }
+
+                let marker = L.circleMarker([feat.lat, feat.lng], {
+                    radius: radius, fillColor: fillColor, color: '#fff', weight: 1.5, opacity: 1, fillOpacity: 0.8
+                }).addTo(map).bindPopup(`<div style="font-family:'Outfit'"><b>${feat.name}</b><br>Origem: ${feat.origin}<br><br>${popupExtra}</div>`);
+                
+                mapMarkers.push(marker);
+            });
+
+            // Atualiza legendas HTML baseado no tema
+            const legendContainer = document.getElementById('map-legend-container');
+            if(theme === 'nutricao') {
+                legendContainer.innerHTML = `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-[var(--color-primary)] block"></span> <span>Padrão</span></div><div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-red-600 block"></span> <span>Risco Severo</span></div>`;
+            } else if (theme === 'transporte') {
+                legendContainer.innerHTML = `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-[#EBB02D] block"></span> <span>A Pé</span></div><div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-[#025464] block"></span> <span>Transporte Público</span></div>`;
+            } else if (theme === 'idade') {
+                legendContainer.innerHTML = `<div class="flex items-center gap-2"><span class="text-gray-500 italic ml-2">O Tamanho do círculo reflete a idade da criança.</span></div>`;
+            } else if (theme === 'serie') {
+                legendContainer.innerHTML = uniqueGrades.map((g,i) => `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full block" style="background:${getColorByIndex(i)}"></span> <span>${g}</span></div>`).join('');
+            } else if (theme === 'origem') {
+                legendContainer.innerHTML = uniqueOrigins.map((o,i) => `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full block" style="background:${getColorByIndex(i)}"></span> <span>${o}</span></div>`).join('');
+            } else if (theme === 'familia') {
+                legendContainer.innerHTML = uniqueFamilies.map((f,i) => `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full block" style="background:${getColorByIndex(i)}"></span> <span>${f}</span></div>`).join('');
+            }
+        }
+
+        // Configuração Global do ChartJS
+        Chart.defaults.color = '#a1a1aa';
+        Chart.defaults.font.family = 'Outfit';
+
+        function renderChartJS(canvasId, type, labelsArray, dataArray, sortDesc = false, dataLabel = 'Quantidade', unitSuffix = '', overrideColor = null) {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+            if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+
+            if(sortDesc && type === 'bar') {
+                let combined = labelsArray.map((l, i) => ({label: l, val: dataArray[i]}));
+                combined.sort((a,b) => b.val - a.val);
+                labelsArray = combined.map(o => o.label);
+                dataArray = combined.map(o => o.val);
+            }
+
+            let bgColors = overrideColor ? [overrideColor] : THEME_COLORS;
+
+            chartInstances[canvasId] = new Chart(ctx.getContext('2d'), {
+                type: type,
+                data: {
+                    labels: labelsArray,
+                    datasets: [{
+                        label: dataLabel, data: dataArray,
+                        backgroundColor: bgColors, borderWidth: 0,
+                        borderRadius: type === 'bar' ? 6 : 0
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, layout: { padding: 20 },
+                    plugins: { 
+                        legend: { display: type !== 'bar', position: canvasId === 'chart-origin' ? 'right' : 'bottom', labels: { padding: canvasId === 'chart-origin' ? 8 : 15, boxWidth: canvasId === 'chart-origin' ? 10 : 40, font: { size: canvasId === 'chart-origin' ? 10 : 11 } } },
+                        tooltip: { callbacks: { label: function(context) { let l = context.dataset.label || ''; if(l) l+= ': '; l += context.parsed.y !== undefined ? context.parsed.y : context.parsed; if(type === 'polarArea') l = context.label + ': ' + context.parsed.r; return l + unitSuffix; } } }
+                    },
+                    scales: type === 'bar' ? {
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { callback: v => v + (unitSuffix.trim() === '%' ? '%' : '') } },
+                        x: { grid: { display: false } }
+                    } : (type === 'polarArea' ? { r: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { display: false } } } : {})
+                }
+            });
+        }
+
+        function renderDualBarChart(canvasId, labels, data1, label1, data2, label2) {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+            if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+
+            chartInstances[canvasId] = new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: label1, data: data1, backgroundColor: '#E57C23', borderRadius: 4 },
+                        { label: label2, data: data2, backgroundColor: '#025464', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, layout: { padding: 20 },
+                    plugins: {
+                        legend: { display: true, position: 'bottom', labels: { padding: 15 } },
+                        tooltip: { callbacks: { label: function(c) { return ` ${c.dataset.label}: ${c.parsed.y}%`; } } }
+                    },
+                    scales: {
+                        y: { max: 100, ticks: { callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function renderStackedBar(canvasId, labels, data1, label1, data2, label2) {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+            if (chartInstances[canvasId]) chartInstances[canvasId].destroy();
+
+            chartInstances[canvasId] = new Chart(ctx.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: label1, data: data1, backgroundColor: '#bf4f74' },
+                        { label: label2, data: data2, backgroundColor: '#3b82f6' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, layout: { padding: 20 },
+                    plugins: { legend: { display: true, position: 'bottom' } },
+                    scales: {
+                        x: { stacked: true, grid: { display: false } },
+                        y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    }
+                }
+            });
+        }
+
+
+        async function loadCmsContent(){
+          try { const result=await apiRequest('/api/cms'); const saved=result.content||{};
+            Object.entries(saved).forEach(([id,value])=>{const el=document.getElementById(id);if(el)el.innerHTML=value;});
+          } catch(e){console.warn('CMS online indisponível',e);}
+        }
+        let cmsSaveTimer=null;
+        document.addEventListener('focusout',function(ev){
+          const el=ev.target;
+          if(!isAdmin||!el||!el.classList||!el.classList.contains('editable')||!el.id)return;
+          clearTimeout(cmsSaveTimer); cmsSaveTimer=setTimeout(async()=>{
+            try { await apiRequest('/api/cms/'+encodeURIComponent(el.id),{method:'PUT',body:JSON.stringify({value:el.innerHTML})}); }
+            catch(e){alert('Não foi possível salvar a edição no servidor: '+e.message);}
+          },150);
+        });
+
+        window.onload = function() {
+            initMap();
+            const activeNav = document.querySelector('.sidebar-link.active');
+            if (activeNav) updateMobileSection(activeNav.innerText.replace(/\s+/g, ' ').replace(/[🗺️🍲⚠️📈🌍📄]/g, '').trim());
+        };
+    </script>
+</body>
+</html>

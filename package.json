@@ -1,0 +1,9 @@
+{
+  "name": "fizischool-commap-cloudflare",
+  "private": true,
+  "scripts": {
+    "build": "uv sync --dev",
+    "deploy": "uv run pywrangler deploy",
+    "preview": "uv run pywrangler dev"
+  }
+}
