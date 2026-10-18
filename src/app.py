@@ -2,6 +2,7 @@ import os
 import secrets
 from functools import wraps
 from pathlib import Path
+from workers import env
 
 import psycopg
 from psycopg.rows import dict_row
@@ -10,7 +11,7 @@ from flask import Flask, jsonify, request, session, send_from_directory, Respons
 
 BASE_DIR = Path(__file__).resolve().parent
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+app.secret_key = env.SECRET_KEY
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
