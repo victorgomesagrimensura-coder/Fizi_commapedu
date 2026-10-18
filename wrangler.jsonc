@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "fizi-school-commap-tec",
+  "name": "fizi-commapedu",
   "main": "src/worker.py",
   "compatibility_date": "2026-10-18",
   "compatibility_flags": ["python_workers"],
